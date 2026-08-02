@@ -82,8 +82,11 @@ def reconstruct_hull(
     f = len(normals)
     h = np.concatenate([np.full(f, 0.3 * side), np.full(n_cage, cage_r)])
     # floor keeps weak oblique faces from slicing deep into the body core
-    # (an unbalanced EGI would otherwise carve wedges out of dominant slabs)
+    # (an unbalanced EGI would otherwise carve wedges out of dominant slabs);
+    # hard cap bounds the runaway when a degenerate EGI (e.g. one lit
+    # hemisphere) makes the area target unreachable
     h_floor, h_cap = 0.08 * side, 0.99 * cage_r
+    h_max = 3.0 * cage_r
 
     for _ in range(n_iter):
         try:
@@ -109,8 +112,8 @@ def reconstruct_hull(
             # areas overshoot) drag the whole body into collapse
             s = float((areas.sum() / total) ** (gamma / 2))
             if s > 1:
-                h *= min(s, 1.1)
-                h_cap = max(h_cap, h[f:].max())
+                h = np.minimum(h * min(s, 1.1), h_max)
+                h_cap = min(max(h_cap, h[f:].max()), h_max)
         h[:f] = np.clip(h[:f], h_floor, h_cap)
 
     polys = _face_polygons(all_n, h)
