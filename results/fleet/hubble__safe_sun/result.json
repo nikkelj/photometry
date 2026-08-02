@@ -19,9 +19,9 @@
   "mode_best": "inertial_fit",
   "mode_expected": "sun_point",
   "mode_correct": true,
-  "egi_total_albedo_area_m2": 24.064092846604034,
-  "egi_total_specular_area_m2": 157993414981765.3,
-  "egi_residual_rms": 1.2795008405338157,
+  "egi_total_albedo_area_m2": 23.901875468930772,
+  "egi_total_specular_area_m2": 94.77024009005524,
+  "egi_residual_rms": 1.2898675193564175,
   "true_diffuse_albedo_area_m2": 81.63843329118873,
   "spin_period_est_s": 1269448657823.9126,
   "spin_pole_est_radec_deg": [
