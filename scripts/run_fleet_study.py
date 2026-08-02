@@ -77,6 +77,16 @@ def run_scenario(s: sc.FleetScenario, outroot: Path) -> dict:
     # accept inertial_fit when a fixed sun-pointing truth is recovered
     accept = {expected} | ({"inertial_fit"} if expected == "sun_point" else set())
     mode_correct = best.name in accept
+    # an LVLH-hold attitude IS a principal-axis spin (pole = orbit normal,
+    # period = orbital): accept spin_fit that recovers exactly that rotation
+    if (not mode_correct and best.name == "spin_fit"
+            and expected in ("lvlh_ops", "lvlh_low_drag")
+            and best.spin_solution is not None):
+        p_orb = 2 * np.pi / orbit.mean_motion
+        pole_err = np.degrees(np.arccos(abs(np.clip(
+            best.spin_solution.pole @ orbit.orbit_normal(), -1, 1))))
+        if abs(best.spin_solution.period_s - p_orb) < 0.02 * p_orb and pole_err < 5.0:
+            mode_correct = True
 
     result = dict(
         scenario=s.name, sat=s.sat, mode_true=s.mode,

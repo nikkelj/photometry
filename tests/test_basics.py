@@ -91,5 +91,56 @@ def test_phase_angle_range():
     assert np.all((ph >= 0) & (ph <= 180))
 
 
+def test_library_models_well_formed():
+    from photometry.shapes import LIBRARY
+    for name, factory in LIBRARY.items():
+        m = factory()
+        assert np.allclose(np.linalg.norm(m.normals, axis=-1), 1), name
+        assert np.all(m.areas > 0), name
+        assert len(m.labels) == m.n_facets, name
+        assert m.polygons, name
+        for i in range(m.n_facets):
+            if m.mirror_of[i] >= 0:
+                assert np.allclose(m.normals[i], -m.normals[m.mirror_of[i]]), name
+
+
+def test_articulation_tracks_sun():
+    from photometry.shapes import GIMBAL_1AXIS, GIMBAL_2AXIS, starlink_v15, starlink_v2mini
+    u_sun = unit(np.array([[0.4, -0.5, 0.77], [0.9, 0.1, 0.42]]))
+    m2 = starlink_v2mini()
+    n = m2.body_normals(u_sun, articulate=True)
+    for i in range(m2.n_facets):
+        if m2.gimbal_mode[i] == GIMBAL_2AXIS and m2.mirror_of[i] < 0:
+            assert np.allclose(n[i], u_sun)  # perfect sun pointing
+    m1 = starlink_v15()
+    n = m1.body_normals(u_sun, articulate=True)
+    for i in range(m1.n_facets):
+        if m1.gimbal_mode[i] == GIMBAL_1AXIS and m1.mirror_of[i] < 0:
+            g = m1.gimbal_axis[i]
+            assert np.allclose(n[i] @ g, 0, atol=1e-12)  # stays in gimbal plane
+            assert np.all(np.einsum("kj,kj->k", n[i], u_sun) > 0)
+
+
+def test_lvlh_hold_attitude():
+    from photometry.attitude import LvlhHold
+    from photometry.constellation import WalkerConstellation
+    orb = WalkerConstellation(1, 1, 620.0, 70.0)
+    att = LvlhHold(orb)
+    t = np.array([0.0, 1000.0, 4000.0])
+    r, v = orb.single_states(t)
+    up_body = att.eci_to_body(t, unit(r))
+    assert np.allclose(up_body, [0, 0, 1], atol=1e-12)  # body z = zenith
+    knife = LvlhHold(orb, roll_deg=90.0)
+    up_knife = knife.eci_to_body(t, unit(r))
+    assert np.allclose(up_knife, [0, 1, 0], atol=1e-12)  # rolled 90 about x
+
+
+def test_spin_body_axis():
+    att = PrincipalAxisSpin(200.0, 35.0, 120.0, 0.3, body_axis=(1, 0, 0))
+    t = np.array([0.0, 40.0, 77.0])
+    axis_body = att.eci_to_body(t, np.tile(att.pole, (3, 1)))
+    assert np.allclose(axis_body, [1, 0, 0], atol=1e-12)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

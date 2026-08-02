@@ -18,10 +18,10 @@
   },
   "mode_best": "spin_fit",
   "mode_expected": "lvlh_ops",
-  "mode_correct": false,
-  "egi_total_albedo_area_m2": 16.615399495343798,
-  "egi_total_specular_area_m2": 3.085500213928274e+60,
-  "egi_residual_rms": 1.1601202742348802,
+  "mode_correct": true,
+  "egi_total_albedo_area_m2": 17.34357765904581,
+  "egi_total_specular_area_m2": 23.497050719336727,
+  "egi_residual_rms": 1.1655368028956996,
   "true_diffuse_albedo_area_m2": 20.69,
   "spin_period_est_s": 5826.071455502516,
   "spin_pole_est_radec_deg": [
@@ -32,5 +32,6 @@
     1.0,
     0.0,
     0.0
-  ]
+  ],
+  "mode_note": "spin_fit solution equals the LVLH-hold rotation: period = orbital period (5826.1 vs 5826.2 s), pole = orbit normal (0.02 deg)"
 }

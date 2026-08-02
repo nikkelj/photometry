@@ -19,8 +19,8 @@
   "mode_best": "lvlh_low_drag",
   "mode_expected": "lvlh_low_drag",
   "mode_correct": true,
-  "egi_total_albedo_area_m2": 16.29294898537894,
-  "egi_total_specular_area_m2": 3.296656763224108e+209,
-  "egi_residual_rms": 1.2310293834786057,
+  "egi_total_albedo_area_m2": 6.9972753126331115,
+  "egi_total_specular_area_m2": 5.6021657128497,
+  "egi_residual_rms": 1.2328058250917158,
   "true_diffuse_albedo_area_m2": 11.430699999999998
 }

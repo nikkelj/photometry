@@ -19,9 +19,9 @@
   "mode_best": "spin_fit",
   "mode_expected": "spin_fit",
   "mode_correct": true,
-  "egi_total_albedo_area_m2": 23.66564905745103,
-  "egi_total_specular_area_m2": 4.831063910010382e+30,
-  "egi_residual_rms": 1.3599283033251606,
+  "egi_total_albedo_area_m2": 23.59011609417172,
+  "egi_total_specular_area_m2": 7.616479755544741,
+  "egi_residual_rms": 1.362456469744937,
   "true_diffuse_albedo_area_m2": 20.69,
   "spin_period_est_s": 127.40006657569754,
   "spin_pole_est_radec_deg": [

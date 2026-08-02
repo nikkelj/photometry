@@ -83,12 +83,12 @@ def articulated_polys(shape, u_sun_body_1: np.ndarray) -> list[np.ndarray]:
     return polys
 
 
-def egi_disks(inv: dict, r_shell: float, top_n: int = 40) -> list[np.ndarray]:
+def egi_disks(inv: dict, r_shell: float, top_n: int = 24) -> list[np.ndarray]:
     """Disk polygons (body frame) for the strongest recovered EGI directions."""
     normals = inv["egi_normals"]
     w = inv["egi_albedo_area"] + inv["egi_specular_area"]
     order = np.argsort(w)[::-1]
-    order = [i for i in order[:top_n] if w[i] > 0.01 * w.max() and w[i] > 1e-3]
+    order = [i for i in order[:top_n] if w[i] > 0.03 * w.max() and w[i] > 1e-3]
     th = np.linspace(0, 2 * np.pi, 17)
     disks = []
     for i in order:
@@ -98,7 +98,7 @@ def egi_disks(inv: dict, r_shell: float, top_n: int = 40) -> list[np.ndarray]:
         helper = np.array([0, 0, 1.0]) if abs(n[2]) < 0.9 else np.array([1.0, 0, 0])
         e1 = unit(np.cross(n, helper))
         e2 = np.cross(n, e1)
-        c = 0.55 * r_shell * n
+        c = 0.45 * r_shell * n
         disks.append(c + rad * (np.outer(np.cos(th), e1) + np.outer(np.sin(th), e2)))
     return disks
 
@@ -139,7 +139,7 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
     times = t0 + frame_dt * np.arange(N_FRAMES)
 
     r_shell = shape.characteristic_radius()
-    lim = 1.5 * r_shell
+    lim = 1.15 * r_shell
     disks_body = egi_disks(inv, r_shell)
 
     style()
@@ -197,7 +197,8 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
         ax3.grid(False)
         ax3.set_title(
             f"{s.sat}  —  truth mode: {s.mode}   estimated: {result['mode_best']}"
-            f"\nt = {t/3600:.2f} h    attitude error {err:5.1f}°",
+            f"\nt = {t/3600:.2f} h    bus-frame attitude error {err:5.1f}°"
+            " (includes any body-symmetry ambiguity)",
             color=INK, fontsize=11, pad=2)
 
         for ax, i, j, xl, yl in planes:

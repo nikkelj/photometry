@@ -19,8 +19,8 @@
   "mode_best": "sun_point",
   "mode_expected": "sun_point",
   "mode_correct": true,
-  "egi_total_albedo_area_m2": 2.587266464934372,
-  "egi_total_specular_area_m2": 3.093303678680057e+17,
-  "egi_residual_rms": 1.181808386238964,
+  "egi_total_albedo_area_m2": 2.574412589874746,
+  "egi_total_specular_area_m2": 6.034690423795,
+  "egi_residual_rms": 1.1846785220365632,
   "true_diffuse_albedo_area_m2": 20.69
 }

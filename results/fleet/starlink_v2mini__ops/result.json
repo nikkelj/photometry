@@ -1,0 +1,26 @@
+{
+  "scenario": "starlink_v2mini__ops",
+  "sat": "starlink_v2mini",
+  "mode_true": "ops",
+  "real_altitude_km": 530,
+  "study_altitude_km": 620.0,
+  "n_detections": 27230,
+  "n_observers": 2461,
+  "sim_seconds": 18.4,
+  "classify_seconds": 67.7,
+  "period_ls_s": 5812.762312633833,
+  "hypothesis_costs": {
+    "lvlh_ops": 1.069827416522001,
+    "spin_fit": 64.75317550950999,
+    "inertial_fit": 68.24566879550098,
+    "lvlh_low_drag": 85.46703636691873,
+    "sun_point": 585.6800350493814
+  },
+  "mode_best": "lvlh_ops",
+  "mode_expected": "lvlh_ops",
+  "mode_correct": true,
+  "egi_total_albedo_area_m2": 45.14061280088387,
+  "egi_total_specular_area_m2": 40.08889607348296,
+  "egi_residual_rms": 1.741480331383105,
+  "true_diffuse_albedo_area_m2": 49.38459999999999
+}
