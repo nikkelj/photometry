@@ -52,17 +52,25 @@ def rotate_about_axis(v: np.ndarray, axis: np.ndarray, angle: np.ndarray) -> np.
     return v * c + np.cross(np.broadcast_to(a, v.shape), v) * s + a * (v @ a)[..., None] * (1 - c)
 
 
-def minimal_rotation_from_z(pole: np.ndarray) -> np.ndarray:
-    """Rotation matrix taking body +z to inertial `pole` (minimal-angle rotation)."""
-    z = np.array([0.0, 0.0, 1.0])
-    p = unit(np.asarray(pole, dtype=float))
-    c = float(np.dot(z, p))
+def minimal_rotation_between(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Rotation matrix taking unit vector a to unit vector b (minimal angle)."""
+    a = unit(np.asarray(a, dtype=float))
+    b = unit(np.asarray(b, dtype=float))
+    c = float(np.dot(a, b))
     if c > 1 - 1e-12:
         return np.eye(3)
     if c < -1 + 1e-12:
-        return np.diag([1.0, -1.0, -1.0])
-    axis = unit(np.cross(z, p))
+        # 180 deg: rotate about any axis perpendicular to a
+        helper = np.array([1.0, 0.0, 0.0]) if abs(a[0]) < 0.9 else np.array([0.0, 1.0, 0.0])
+        axis = unit(np.cross(a, helper))
+        return rodrigues(axis, np.pi)
+    axis = unit(np.cross(a, b))
     return rodrigues(axis, np.arccos(np.clip(c, -1, 1)))
+
+
+def minimal_rotation_from_z(pole: np.ndarray) -> np.ndarray:
+    """Rotation matrix taking body +z to inertial `pole` (minimal-angle rotation)."""
+    return minimal_rotation_between(np.array([0.0, 0.0, 1.0]), pole)
 
 
 def lvlh_basis(r: np.ndarray, v: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:

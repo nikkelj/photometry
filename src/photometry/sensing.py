@@ -31,16 +31,19 @@ def simulate_detections(
     constellation: WalkerConstellation,
     target_orbit: WalkerConstellation,
     target_shape: FacetModel,
-    target_attitude: PrincipalAxisSpin,
+    target_attitude,
     sun_eci: np.ndarray,
     t_grid: np.ndarray,
     sensors: SensorConfig,
     rng: np.random.Generator,
+    articulate: bool = False,
 ) -> ObservationSet:
     """Step the constellation and target through time and collect detections.
 
     The target orbit is passed as a single-satellite WalkerConstellation for
-    convenience (circular orbit, arbitrary plane/anomaly).
+    convenience (circular orbit, arbitrary plane/anomaly). `target_attitude`
+    is any model exposing eci_to_body(t, v). With `articulate` True, gimbaled
+    facets track the sun per the shape's articulation rules.
     """
     b_lvlh = tracker_boresights_lvlh(sensors.tracker_elevation_deg, sensors.tracker_azimuths_deg)
     cos_fov = np.cos(np.radians(sensors.fov_half_angle_deg))
@@ -82,7 +85,9 @@ def simulate_detections(
         att_t = np.full(k, float(t))
         u_sun_body = target_attitude.eci_to_body(att_t, np.broadcast_to(sun, (k, 3)).copy())
         u_obs_body = target_attitude.eci_to_body(att_t, u_obs_eci)
-        mag_true = apparent_magnitude(target_shape, u_sun_body, u_obs_body, rng_km[sat_idx])
+        normals = target_shape.body_normals(u_sun_body, articulate=articulate)
+        mag_true = apparent_magnitude(target_shape, u_sun_body, u_obs_body,
+                                      rng_km[sat_idx], normals=normals)
 
         detectable = (mag_true < sensors.limiting_mag) & (mag_true > sensors.saturation_mag)
         for j in np.nonzero(detectable)[0]:

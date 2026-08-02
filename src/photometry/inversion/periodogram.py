@@ -12,21 +12,31 @@ def brightness_periodogram(
     obs: ObservationSet,
     period_range_s: tuple[float, float] = (10.0, 600.0),
     n_periods: int = 4000,
+    oversample: float = 4.0,
+    max_obs: int = 8000,
+    seed: int = 0,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Lomb–Scargle periodogram of the range-normalized log-brightness.
 
     With observers spread all around the target the sampled brightness is
     a superposition of a slow geometry trend and the fast spin signature;
     the spin period (or half of it, for two-fold symmetric shapes) shows up
-    directly. Returns (periods_s, normalized_power).
+    directly. The frequency grid is sized to the arc length (peak width
+    ~1/T_arc) so long arcs cannot step over a narrow spin peak; n_periods
+    is a floor on the grid size. Returns (periods_s, normalized_power).
     """
-    t = obs.t_s
-    y = -2.5 * np.log10(np.clip(obs.normalized_brightness(), 1e-6, None))
+    t, y0 = obs.t_s, obs.normalized_brightness()
+    if len(t) > max_obs:
+        idx = np.random.default_rng(seed).choice(len(t), max_obs, replace=False)
+        t, y0 = t[idx], y0[idx]
+    y = -2.5 * np.log10(np.clip(y0, 1e-6, None))
     y = y - np.mean(y)
-    periods = np.linspace(period_range_s[0], period_range_s[1], n_periods)
-    omega = 2 * np.pi / periods
-    power = lombscargle(t, y, omega, normalize=True)
-    return periods, power
+    t_arc = max(t.max() - t.min(), 1.0)
+    f_lo, f_hi = 1.0 / period_range_s[1], 1.0 / period_range_s[0]
+    n = int(np.clip((f_hi - f_lo) * oversample * t_arc, n_periods, 300_000))
+    freqs = np.linspace(f_lo, f_hi, n)
+    power = lombscargle(t, y, 2 * np.pi * freqs, normalize=True)
+    return 1.0 / freqs, power
 
 
 def best_period(periods: np.ndarray, power: np.ndarray) -> float:

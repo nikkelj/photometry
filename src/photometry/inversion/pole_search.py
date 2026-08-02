@@ -30,17 +30,22 @@ class PoleSolution:
     pole_dec_deg: float
     grid_poles: np.ndarray
     grid_costs: np.ndarray
+    body_axis: tuple = (0.0, 0.0, 1.0)
 
 
-def _model_mags(shape, pole, period, phase, obs: ObservationSet) -> np.ndarray:
-    u_sun_body = spin_body_directions(pole, period, phase, obs.t_s, obs.sun_eci)
-    u_obs_body = spin_body_directions(pole, period, phase, obs.t_s, obs.u_obs_from_target())
+def _model_mags(shape, pole, period, phase, obs: ObservationSet,
+                body_axis=(0.0, 0.0, 1.0)) -> np.ndarray:
+    u_sun_body = spin_body_directions(pole, period, phase, obs.t_s, obs.sun_eci,
+                                      body_axis)
+    u_obs_body = spin_body_directions(pole, period, phase, obs.t_s,
+                                      obs.u_obs_from_target(), body_axis)
     b = facet_brightness(shape, u_sun_body, u_obs_body).sum(axis=0)
     return -2.5 * np.log10(np.clip(b, 1e-9, None))
 
 
-def _cost(shape, pole, period, phase, obs, meas_mag, w) -> float:
-    dm = meas_mag - _model_mags(shape, pole, period, phase, obs)
+def _cost(shape, pole, period, phase, obs, meas_mag, w,
+          body_axis=(0.0, 0.0, 1.0)) -> float:
+    dm = meas_mag - _model_mags(shape, pole, period, phase, obs, body_axis)
     dm = dm - np.sum(w * dm) / np.sum(w)  # free photometric offset (albedo scale)
     # Huber-style soft clip so specular-glint mismatches don't dominate
     r = np.sqrt(w) * dm
@@ -57,7 +62,14 @@ def grid_search_pole(
     n_phases: int = 16,
     max_obs: int = 2500,
     seed: int = 0,
+    body_axes: tuple = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
 ) -> PoleSolution:
+    """Grid over pole x phase x candidate period x body spin axis, then refine.
+
+    The body spin axis is which principal body axis lies along the pole —
+    a flat spin and a propeller tumble of the same object photometrically
+    differ enormously, so it is part of the hypothesis space.
+    """
     rng = np.random.default_rng(seed)
     if len(obs) > max_obs:
         obs = obs.subset(np.sort(rng.choice(len(obs), max_obs, replace=False)))
@@ -72,18 +84,19 @@ def grid_search_pole(
 
     grid_costs = np.full(len(poles), np.inf)
     best = (np.inf, None)
-    for period in candidate_periods:
-        for i, p in enumerate(poles):
-            c_best = np.inf
-            for phase in phases:
-                c = _cost(shape, p, period, phase, obs, meas_mag, w)
-                if c < c_best:
-                    c_best = c
-                if c < best[0]:
-                    best = (c, (p, period, phase))
-            grid_costs[i] = min(grid_costs[i], c_best)
+    for axis in body_axes:
+        for period in candidate_periods:
+            for i, p in enumerate(poles):
+                c_best = np.inf
+                for phase in phases:
+                    c = _cost(shape, p, period, phase, obs, meas_mag, w, axis)
+                    if c < c_best:
+                        c_best = c
+                    if c < best[0]:
+                        best = (c, (p, period, phase, axis))
+                grid_costs[i] = min(grid_costs[i], c_best)
 
-    p0, period0, phase0 = best[1]
+    p0, period0, phase0, axis0 = best[1]
     ra0, dec0 = unit_to_radec(p0)
 
     def objective(x):
@@ -95,7 +108,7 @@ def grid_search_pole(
                 np.sin(np.radians(dec)),
             ]
         )
-        return _cost(shape, pole, per, ph, obs, meas_mag, w)
+        return _cost(shape, pole, per, ph, obs, meas_mag, w, axis0)
 
     res = minimize(
         objective,
@@ -122,6 +135,7 @@ def grid_search_pole(
         pole_dec_deg=float(dec),
         grid_poles=poles,
         grid_costs=grid_costs,
+        body_axis=tuple(float(a) for a in axis0),
     )
 
 
