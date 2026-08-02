@@ -35,7 +35,13 @@ def brightness_periodogram(
     f_lo, f_hi = 1.0 / period_range_s[1], 1.0 / period_range_s[0]
     n = int(np.clip((f_hi - f_lo) * oversample * t_arc, n_periods, 300_000))
     freqs = np.linspace(f_lo, f_hi, n)
-    power = lombscargle(t, y, 2 * np.pi * freqs, normalize=True)
+    # chunk the frequency axis: scipy's lombscargle broadcasts an
+    # (n_freqs, n_samples) intermediate, which is many GB for a day-long arc
+    power = np.empty(n)
+    step = max(1, 2_000_000 // max(len(t), 1))
+    for i in range(0, n, step):
+        power[i:i + step] = lombscargle(t, y, 2 * np.pi * freqs[i:i + step],
+                                        normalize=True)
     return 1.0 / freqs, power
 
 

@@ -1,0 +1,36 @@
+{
+  "scenario": "bluewalker3__tumble",
+  "sat": "bluewalker3",
+  "mode_true": "tumble",
+  "real_altitude_km": 500,
+  "study_altitude_km": 620.0,
+  "n_detections": 27600,
+  "n_observers": 2504,
+  "sim_seconds": 17.7,
+  "classify_seconds": 33.8,
+  "period_ls_s": 63.69983326051485,
+  "hypothesis_costs": {
+    "spin_fit": 1.0146802384714029,
+    "inertial_fit": 80.39232778370295,
+    "lvlh_low_drag": 133.50036961449803,
+    "lvlh_ops": 136.14308678957923,
+    "sun_point": 636.252634092329
+  },
+  "mode_best": "spin_fit",
+  "mode_expected": "spin_fit",
+  "mode_correct": true,
+  "egi_total_albedo_area_m2": 23.66564905745103,
+  "egi_total_specular_area_m2": 4.831063910010382e+30,
+  "egi_residual_rms": 1.3599283033251606,
+  "true_diffuse_albedo_area_m2": 20.69,
+  "spin_period_est_s": 127.40006657569754,
+  "spin_pole_est_radec_deg": [
+    200.04827033994252,
+    35.000447082459935
+  ],
+  "spin_body_axis_est": [
+    0.0,
+    1.0,
+    0.0
+  ]
+}

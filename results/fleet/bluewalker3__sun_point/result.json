@@ -1,0 +1,26 @@
+{
+  "scenario": "bluewalker3__sun_point",
+  "sat": "bluewalker3",
+  "mode_true": "sun_point",
+  "real_altitude_km": 500,
+  "study_altitude_km": 620.0,
+  "n_detections": 18885,
+  "n_observers": 2394,
+  "sim_seconds": 16.5,
+  "classify_seconds": 58.4,
+  "period_ls_s": 5812.855980471929,
+  "hypothesis_costs": {
+    "sun_point": 1.0421347212716585,
+    "spin_fit": 4.284847584552807,
+    "inertial_fit": 4.491430012300829,
+    "lvlh_ops": 55.54707750438956,
+    "lvlh_low_drag": 66.53387274296996
+  },
+  "mode_best": "sun_point",
+  "mode_expected": "sun_point",
+  "mode_correct": true,
+  "egi_total_albedo_area_m2": 2.587266464934372,
+  "egi_total_specular_area_m2": 3.093303678680057e+17,
+  "egi_residual_rms": 1.181808386238964,
+  "true_diffuse_albedo_area_m2": 20.69
+}

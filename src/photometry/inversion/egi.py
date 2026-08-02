@@ -74,12 +74,23 @@ def solve_egi(
     g_spec = [phong_design_matrix(normals, us, uo, e) for e in phong_exponents]
     g = np.hstack([g_lam, *g_spec])
 
+    # a sharp Phong column that no measurement geometry excites has near-zero
+    # norm; NNLS would assign it an astronomically large coefficient to chase
+    # noise. Prune dead columns and add a small ridge to bound the rest.
+    col_norm = np.linalg.norm(g / sigma_b[:, None], axis=0)
+    active = col_norm > 1e-6 * col_norm.max()
+    ridge = 1e-3 * np.median(col_norm[active])
+
     inliers = np.ones(len(b), dtype=bool)
     x = np.zeros(g.shape[1])
     for _ in range(3):
-        gw = g[inliers] / sigma_b[inliers, None]
+        gw = g[inliers][:, active] / sigma_b[inliers, None]
         bw = b[inliers] / sigma_b[inliers]
-        x, _ = nnls(gw, bw)
+        a_aug = np.vstack([gw, ridge * np.eye(active.sum())])
+        b_aug = np.concatenate([bw, np.zeros(active.sum())])
+        x_act, _ = nnls(a_aug, b_aug)
+        x = np.zeros(g.shape[1])
+        x[active] = x_act
         resid = (b - g @ x) / sigma_b
         new_inliers = np.abs(resid) < clip_sigma
         if new_inliers.sum() == inliers.sum():
