@@ -4,9 +4,13 @@ Each frame shows, in the target's LVLH frame (x along-track, y cross-track,
 z radial-out):
   - the TRUTH shape (polygons, truth attitude + articulation) — the
     "navigation data" the inversion is judged against
-  - the INVERTED product: EGI facet disks (recovered albedo+specular area
-    per normal) oriented by the *estimated* attitude, drawn exploded onto a
-    shell of roughly the object's size
+  - the INVERTED product: a convex body Minkowski-reconstructed from the
+    recovered EGI (a solid whose face normals/areas match the recovered
+    oriented-area distribution), oriented by the *estimated* attitude and
+    centered on the truth (photometry carries no position information).
+    Closure faces — where the EGI has no recovered area and the body is
+    capped by a bounding cage — draw as dim edges. Falls back to exploded
+    EGI disks if reconstruction fails.
   - a 3D view plus 2D projections onto the three LVLH planes
 
 Usage: python scripts/make_movies.py [scenario ...]   (default: all found)
@@ -29,6 +33,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from photometry import scenarios as sc
 from photometry.attitude import PrincipalAxisSpin
 from photometry.frames import in_earth_shadow, lvlh_basis, minimal_rotation_between, unit
+from photometry.inversion.minkowski import hull_from_egi
 from photometry.shapes import GIMBAL_FIXED
 
 SURFACE = "#1a1a19"
@@ -140,7 +145,20 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
 
     r_shell = shape.characteristic_radius()
     lim = 1.15 * r_shell
-    disks_body = egi_disks(inv, r_shell)
+    # inverted shape: Minkowski-reconstructed convex hull from the EGI —
+    # an actual solid, directly comparable to the truth polygons. Falls
+    # back to exploded EGI disks if the reconstruction fails.
+    try:
+        hull = hull_from_egi(inv["egi_normals"], inv["egi_albedo_area"],
+                             inv["egi_specular_area"])
+        est_body = [f.vertices for f in hull if not f.is_closure]
+        est_closure = [f.vertices for f in hull if f.is_closure]
+        if not est_body:
+            raise RuntimeError("empty hull")
+    except Exception as e:
+        print(f"  hull reconstruction failed ({e}); using EGI disks")
+        est_body = egi_disks(inv, r_shell)
+        est_closure = []
 
     style()
     fig = plt.figure(figsize=(10.5, 7.0))
@@ -170,7 +188,8 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
         polys_body = articulated_polys(shape, u_sun_body_true) if articulate \
             else [v for v, _ in shape.polygons]
         polys_lvlh = [to_lvlh(v, r_true, basis) for v in polys_body]
-        disks_lvlh = [to_lvlh(d, r_est, basis) for d in disks_body]
+        disks_lvlh = [to_lvlh(d, r_est, basis) for d in est_body]
+        closure_lvlh = [to_lvlh(d, r_est, basis) for d in est_closure]
         sun_lvlh = basis @ sun
 
         ax3.clear()
@@ -181,6 +200,10 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
         ax3.add_collection3d(Poly3DCollection(
             disks_lvlh, facecolors=EST_COLOR, edgecolors=EST_COLOR,
             linewidths=0.5, alpha=0.45))
+        if closure_lvlh:
+            ax3.add_collection3d(Poly3DCollection(
+                closure_lvlh, facecolors="none", edgecolors=EST_COLOR,
+                linewidths=0.4, alpha=0.25))
         a = lim
         ax3.quiver(-a, 0, 0, 0.55 * a, 0, 0, color=MUTED, arrow_length_ratio=0.12)
         ax3.text(-a + 0.6 * a, 0, 0.06 * a, "v (along)", color=MUTED, fontsize=8)
@@ -209,7 +232,12 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
                 ax.plot(np.append(v[:, i], v[0, i]), np.append(v[:, j], v[0, j]),
                         color=TRUTH_EDGE, lw=0.7)
             for d in disks_lvlh:
-                ax.plot(d[:, i], d[:, j], color=EST_COLOR, lw=0.9, alpha=0.8)
+                ax.fill(d[:, i], d[:, j], color=EST_COLOR, alpha=0.18, lw=0)
+                ax.plot(np.append(d[:, i], d[0, i]), np.append(d[:, j], d[0, j]),
+                        color=EST_COLOR, lw=0.9, alpha=0.85)
+            for d in closure_lvlh:
+                ax.plot(np.append(d[:, i], d[0, i]), np.append(d[:, j], d[0, j]),
+                        color=EST_COLOR, lw=0.4, alpha=0.35)
             ax.set_xlim(-lim, lim); ax.set_ylim(-lim, lim)
             ax.set_aspect("equal")
             ax.set_xlabel(xl, fontsize=7.5, labelpad=1)
@@ -222,7 +250,7 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
                 mpl.patches.Patch(facecolor=TRUTH_FILL, edgecolor=TRUTH_EDGE,
                                   alpha=0.5, label="truth shape @ truth attitude (nav data)"),
                 mpl.patches.Patch(facecolor=EST_COLOR, alpha=0.6,
-                                  label="inverted EGI disks @ estimated attitude"),
+                                  label="inverted shape (Minkowski hull from EGI) @ estimated attitude"),
             ], loc="lower left", fontsize=8.5, bbox_to_anchor=(0.02, 0.015))
 
     anim = FuncAnimation(fig, draw, frames=N_FRAMES, interval=1000 / FPS)

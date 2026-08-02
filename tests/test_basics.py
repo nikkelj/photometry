@@ -144,3 +144,18 @@ def test_spin_body_axis():
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+def test_minkowski_cube_reconstruction():
+    from photometry.inversion.minkowski import reconstruct_hull
+    normals = np.array([[1, 0, 0], [-1, 0, 0], [0, 1, 0],
+                        [0, -1, 0], [0, 0, 1], [0, 0, -1]], dtype=float)
+    faces = reconstruct_hull(normals, np.full(6, 4.0))
+    egi = [f for f in faces if not f.is_closure]
+    assert len(egi) == 6
+    total = sum(f.area for f in egi)
+    assert abs(total - 24.0) / 24.0 < 0.15
+    v = np.vstack([f.vertices for f in faces])
+    ext = v.max(0) - v.min(0)
+    assert np.all(np.abs(ext - 2.0) < 0.4)  # ~2 m cube
+    assert np.abs(v.mean(0)).max() < 0.2  # recentered near origin
