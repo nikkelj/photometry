@@ -20,9 +20,9 @@
     35.0
   ],
   "pole_err_deg": 0.038699256944050124,
-  "egi_total_albedo_area_m2": 6.236385908913042,
+  "egi_total_albedo_area_m2": 4.5662244152863485,
   "egi_true_total_albedo_area_m2": 5.0,
-  "egi_capture_frac_15deg": 0.7648406753334085,
-  "egi_residual_rms": 1.1469709676694761,
-  "n_glints_clipped": 2149
+  "egi_capture_frac_15deg": 0.9993219100695725,
+  "egi_residual_rms": 1.1169437828360271,
+  "n_glints_clipped": 1763
 }
