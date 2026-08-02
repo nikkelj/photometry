@@ -44,14 +44,22 @@ def _model_mags(shape, pole, period, phase, obs: ObservationSet,
 
 
 def _cost(shape, pole, period, phase, obs, meas_mag, w,
-          body_axis=(0.0, 0.0, 1.0)) -> float:
+          body_axis=(0.0, 0.0, 1.0), offset_sigma=None) -> float:
     dm = meas_mag - _model_mags(shape, pole, period, phase, obs, body_axis)
-    dm = dm - np.sum(w * dm) / np.sum(w)  # free photometric offset (albedo scale)
+    if offset_sigma is None:
+        o = np.sum(w * dm) / np.sum(w)  # free photometric offset (albedo scale)
+        penalty = 0.0
+    else:
+        # zero-mean Gaussian prior on the offset keeps absolute brightness
+        # informative (range is known) while absorbing albedo uncertainty
+        o = np.sum(w * dm) / (np.sum(w) + 1.0 / offset_sigma**2)
+        penalty = (o / offset_sigma) ** 2 / len(dm)
+    dm = dm - o
     # Huber-style soft clip so specular-glint mismatches don't dominate
     r = np.sqrt(w) * dm
     a = 3.0
     rho = np.where(np.abs(r) < a, r**2, 2 * a * np.abs(r) - a**2)
-    return float(np.mean(rho))
+    return float(np.mean(rho) + penalty)
 
 
 def grid_search_pole(
@@ -63,6 +71,7 @@ def grid_search_pole(
     max_obs: int = 2500,
     seed: int = 0,
     body_axes: tuple = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+    offset_sigma: float | None = None,
 ) -> PoleSolution:
     """Grid over pole x phase x candidate period x body spin axis, then refine.
 
@@ -89,7 +98,8 @@ def grid_search_pole(
             for i, p in enumerate(poles):
                 c_best = np.inf
                 for phase in phases:
-                    c = _cost(shape, p, period, phase, obs, meas_mag, w, axis)
+                    c = _cost(shape, p, period, phase, obs, meas_mag, w, axis,
+                              offset_sigma)
                     if c < c_best:
                         c_best = c
                     if c < best[0]:
@@ -108,7 +118,7 @@ def grid_search_pole(
                 np.sin(np.radians(dec)),
             ]
         )
-        return _cost(shape, pole, per, ph, obs, meas_mag, w, axis0)
+        return _cost(shape, pole, per, ph, obs, meas_mag, w, axis0, offset_sigma)
 
     res = minimize(
         objective,

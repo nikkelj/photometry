@@ -45,6 +45,7 @@ BASELINE = "#383835"
 TRUTH_FILL = "#86b6ef"
 TRUTH_EDGE = "#3987e5"
 EST_COLOR = "#d95926"
+DISK_COLOR = "#d55181"
 SUN_COLOR = "#c98500"
 
 N_FRAMES = 144
@@ -156,9 +157,12 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
         if not est_body:
             raise RuntimeError("empty hull")
     except Exception as e:
-        print(f"  hull reconstruction failed ({e}); using EGI disks")
-        est_body = egi_disks(inv, r_shell)
+        print(f"  hull reconstruction failed ({e}); rendering EGI disks only")
+        est_body = []
         est_closure = []
+    # both estimate layers: the hull is the reconstructed solid, the disks
+    # are the raw EGI (oriented area, exploded outward for visibility)
+    disks_raw = egi_disks(inv, r_shell)
 
     style()
     fig = plt.figure(figsize=(10.5, 7.0))
@@ -190,6 +194,7 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
         polys_lvlh = [to_lvlh(v, r_true, basis) for v in polys_body]
         disks_lvlh = [to_lvlh(d, r_est, basis) for d in est_body]
         closure_lvlh = [to_lvlh(d, r_est, basis) for d in est_closure]
+        raw_lvlh = [to_lvlh(d, r_est, basis) for d in disks_raw]
         sun_lvlh = basis @ sun
 
         ax3.clear()
@@ -204,6 +209,10 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
             ax3.add_collection3d(Poly3DCollection(
                 closure_lvlh, facecolors="none", edgecolors=EST_COLOR,
                 linewidths=0.4, alpha=0.25))
+        if raw_lvlh:
+            ax3.add_collection3d(Poly3DCollection(
+                raw_lvlh, facecolors="none", edgecolors=DISK_COLOR,
+                linewidths=0.8, alpha=0.55))
         a = lim
         ax3.quiver(-a, 0, 0, 0.55 * a, 0, 0, color=MUTED, arrow_length_ratio=0.12)
         ax3.text(-a + 0.6 * a, 0, 0.06 * a, "v (along)", color=MUTED, fontsize=8)
@@ -238,6 +247,9 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
             for d in closure_lvlh:
                 ax.plot(np.append(d[:, i], d[0, i]), np.append(d[:, j], d[0, j]),
                         color=EST_COLOR, lw=0.4, alpha=0.35)
+            for d in raw_lvlh:
+                ax.plot(np.append(d[:, i], d[0, i]), np.append(d[:, j], d[0, j]),
+                        color=DISK_COLOR, lw=0.6, alpha=0.5)
             ax.set_xlim(-lim, lim); ax.set_ylim(-lim, lim)
             ax.set_aspect("equal")
             ax.set_xlabel(xl, fontsize=7.5, labelpad=1)
@@ -251,6 +263,8 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
                                   alpha=0.5, label="truth shape @ truth attitude (nav data)"),
                 mpl.patches.Patch(facecolor=EST_COLOR, alpha=0.6,
                                   label="inverted shape (Minkowski hull from EGI) @ estimated attitude"),
+                mpl.patches.Patch(facecolor="none", edgecolor=DISK_COLOR,
+                                  label="raw EGI disks (oriented area, exploded outward)"),
             ], loc="lower left", fontsize=8.5, bbox_to_anchor=(0.02, 0.015))
 
     anim = FuncAnimation(fig, draw, frames=N_FRAMES, interval=1000 / FPS)
