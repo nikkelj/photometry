@@ -1,0 +1,42 @@
+{
+  "scenario": "iss__ops",
+  "true_model": "iss",
+  "true_mode": "ops",
+  "identified_model": "iss",
+  "identified_hypothesis": "lvlh_ops",
+  "identified_arrays_tracking": true,
+  "correct_model": true,
+  "match_seconds": 129.7,
+  "best_cost_per_model": {
+    "iss": 1.0176557185756399,
+    "katalyst_link": 7.391006262728758,
+    "box_wing": 16.953664695038867,
+    "hubble": 20.866669923747565,
+    "starlink_v15": 45.18369299393026,
+    "starlink_v2mini": 54.989487295115836,
+    "starlink_v2mini_dtc": 67.0944974204419,
+    "bluewalker3": 75.62871813106531
+  },
+  "top5": [
+    {
+      "label": "iss | lvlh_ops | arrays tracking",
+      "cost": 1.0176557185756399
+    },
+    {
+      "label": "katalyst_link | lvlh_low_drag | arrays tracking",
+      "cost": 7.391006262728758
+    },
+    {
+      "label": "box_wing | lvlh_low_drag | arrays frozen",
+      "cost": 16.953664695038867
+    },
+    {
+      "label": "hubble | inertial_fit | arrays frozen",
+      "cost": 20.866669923747565
+    },
+    {
+      "label": "hubble | spin_fit | arrays frozen",
+      "cost": 25.814793679079354
+    }
+  ]
+}
