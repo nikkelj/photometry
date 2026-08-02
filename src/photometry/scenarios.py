@@ -99,6 +99,12 @@ SCENARIOS: list[FleetScenario] = [
     FleetScenario("hubble", "tumble", 530),
     FleetScenario("iss", "ops", 420),
     FleetScenario("iss", "tumble", 420),
+    # Katalyst LINK (Swift reboost): real state as of late 2026-07 is a
+    # multi-axis spin after losing 2 of 3 reaction wheels; Swift's orbit
+    # (the mission target) is ~500 km / 20.6 deg
+    FleetScenario("katalyst_link", "ops", 500),
+    FleetScenario("katalyst_link", "sun_point", 500),
+    FleetScenario("katalyst_link", "tumble", 500),
 ]
 
 

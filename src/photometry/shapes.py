@@ -299,6 +299,27 @@ def hubble() -> FacetModel:
     return b.build()
 
 
+def katalyst_link() -> FacetModel:
+    """Katalyst Space Technologies LINK (Swift reboost mission, launched
+    2026-07-03): ~425 kg servicer, bus ~"large mini-fridge" (~0.9 x 0.9 x
+    1.5 m), two solar array wings spanning ~6 m tip-to-tip (~4 kW, so
+    ~8 m^2 of cells), robotic capture mechanism on the +x (approach) face.
+
+    As of late July 2026 the spacecraft has two of three reaction wheels
+    failed and is in a multi-axis spin — the 'tumble' scenario approximates
+    that state with a principal-axis spin about the array boom axis.
+    """
+    b = _Builder("katalyst_link")
+    b.box((0, 0, 0), (0.9, 0.9, 1.5), MLI, "bus",
+          mats=[ANTENNA, MLI, MLI, MLI, MLI, DARK])  # +x capture face
+    for sign, tag in [(1, "+y"), (-1, "-y")]:
+        cy = sign * (0.45 + 0.35 + 2.2 / 2)
+        b.panel((0, cy, 0), (1, 0, 0), (0, sign, 0), 1.8, 2.2, CELLS,
+                PANEL_BACK, f"array {tag}", gimbal=GIMBAL_1AXIS,
+                gimbal_axis=(0, 1, 0))
+    return b.build()
+
+
 def iss() -> FacetModel:
     """ISS, coarse: module stack (~50 m, along x), main truss (~100 m, along
     y), two solar array groups (~840 m^2 each) on 2-axis alpha/beta gimbals,
@@ -324,4 +345,5 @@ LIBRARY = {
     "bluewalker3": bluewalker3,
     "hubble": hubble,
     "iss": iss,
+    "katalyst_link": katalyst_link,
 }
