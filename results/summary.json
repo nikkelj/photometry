@@ -1,28 +1,28 @@
 {
-  "n_detections": 5703,
+  "n_detections": 5704,
   "n_observers": 588,
   "arc_hours": 3.232222222222222,
-  "median_range_km": 648.4299514208109,
+  "median_range_km": 648.4789262805577,
   "phase_angle_span_deg": [
     0.42407081790605156,
     143.67671728701222
   ],
-  "period_ls_s": 127.43935983995999,
-  "period_est_s": 127.3993754809579,
+  "period_ls_s": 127.2777855056336,
+  "period_est_s": 127.37464886533112,
   "period_true_s": 127.4,
-  "period_err_ms": 0.6245190421054758,
+  "period_err_ms": 25.35113466888106,
   "pole_est_radec_deg": [
-    199.96136853169816,
-    34.9777300413693
+    197.6561167703092,
+    34.00952182569998
   ],
   "pole_true_radec_deg": [
     200.0,
     35.0
   ],
-  "pole_err_deg": 0.038699256944050124,
-  "egi_total_albedo_area_m2": 4.5662244152863485,
+  "pole_err_deg": 2.1706041529389113,
+  "egi_total_albedo_area_m2": 4.479907655902716,
   "egi_true_total_albedo_area_m2": 5.0,
-  "egi_capture_frac_15deg": 0.9993219100695725,
-  "egi_residual_rms": 1.1169437828360271,
-  "n_glints_clipped": 1763
+  "egi_capture_frac_15deg": 0.9796350181972169,
+  "egi_residual_rms": 1.3601085177030785,
+  "n_glints_clipped": 1903
 }

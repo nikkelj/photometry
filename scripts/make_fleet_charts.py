@@ -65,7 +65,7 @@ def chart_modes(rows: list[dict], out: Path) -> None:
                    facecolors="none",
                    edgecolors=S3_AQUA if ok else "#e66767", linewidths=2)
         j_exp = HYPS.index(r["mode_expected"])
-        if j_exp != j_best:
+        if j_exp != j_best and not ok:
             ax.scatter([j_exp], [i], marker="x", s=60, color="#e66767",
                        linewidths=1.6)
     ax.set_xticks(range(len(HYPS)))

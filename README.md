@@ -32,9 +32,50 @@ python -m pytest tests/
 horizontal; tumbling box-wing target at 620 km spinning at 127.4 s. Over a
 3.2 h arc: **5,703 detections from 588 distinct observers**, phase angles
 14–142°. Recovery: spin period to **1 ms**, spin pole to **0.04°**, and the
-convex shape's extended Gaussian image with 76% of recovered albedo-area
-within 15° of true facet normals (the anti-sunward facet is unilluminated
-for the whole arc and correctly unobservable).
+convex shape's extended Gaussian image (joint Lambert + specular NNLS) with
+98% of recovered albedo-area within 15° of true facet normals (the
+anti-sunward facet is unilluminated for the whole arc and correctly
+unobservable).
 
 ![summary](results/charts/00_summary_tiles.png)
 ![light curve](results/charts/01_lightcurve.png)
+
+## Day-in-the-life fleet study
+
+Six library satellites built from open-source dimensions — Starlink v1.5
+(one 1-axis shoulder array), Starlink v2 mini (two 2-axis shoulder+wrist
+arrays), v2 mini DTC (adds a half-bus-length nadir antenna panel),
+BlueWalker 3 (bus centered in a fixed 8x8 m array), Hubble, and the ISS —
+each simulated for 24 h in several attitude / array-pointing modes
+(nadir-hold ops with sun-tracking arrays, knife-edge low-drag, sun-point,
+inertial science pointing, propeller tumble). 17 scenarios total
+(`photometry/scenarios.py`, results in `results/fleet/`).
+
+- **Mode classification: 16/17 correct** against a hypothesis bank of
+  {LVLH-hold, knife-edge, sun-point, fitted uniform spin, fitted fixed
+  inertial attitude}. The one miss is physics, not software: Hubble
+  tumbling about its own cylinder axis is photometrically near-static
+  (axisymmetric), and the classifier reasonably reports "no detectable
+  rotation".
+- Tumble spin states recover to ~0.1° pole / sub-ms period; discrete
+  ambiguities remain for symmetric shapes (90° body-axis swaps for
+  plate-like buses, 180° flips for cylinders).
+- Ops-mode EGIs recover the **body-fixed** facets (bus, fixed antennas) —
+  sun-tracking arrays are not stationary in the body frame and correctly
+  do not appear as body-fixed area; a real product would model them with
+  the articulation law, as the classifier's forward model does.
+- ISS is saturation-limited (star trackers cap at mag -1) yet still
+  classifies correctly from ~3-6k unsaturated long-range detections.
+- Per-scenario LVLH validation movies (truth shape at truth attitude vs
+  inverted EGI disks at estimated attitude, with projections onto the
+  three LVLH planes) are in `results/movies/` — regenerate with
+  `python scripts/make_movies.py`.
+
+![fleet modes](results/charts/06_fleet_modes.png)
+![fleet EGI](results/charts/07_fleet_egi.png)
+
+**Observability caveat**: trackers canted 5° above the local horizontal
+only see objects **above** the shell altitude. Several real targets (ISS
+at ~420 km, Hubble at ~530 km, in-shell Starlinks) sit at or below the
+550 km shell; the study places all targets on a common 620 km orbit so
+the geometry is comparable, and records real altitudes in the metadata.
