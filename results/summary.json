@@ -1,0 +1,28 @@
+{
+  "n_detections": 5703,
+  "n_observers": 588,
+  "arc_hours": 3.232222222222222,
+  "median_range_km": 648.4299514208109,
+  "phase_angle_span_deg": [
+    0.42407081790605156,
+    143.67671728701222
+  ],
+  "period_ls_s": 127.43935983995999,
+  "period_est_s": 127.3993754809579,
+  "period_true_s": 127.4,
+  "period_err_ms": 0.6245190421054758,
+  "pole_est_radec_deg": [
+    199.96136853169816,
+    34.9777300413693
+  ],
+  "pole_true_radec_deg": [
+    200.0,
+    35.0
+  ],
+  "pole_err_deg": 0.038699256944050124,
+  "egi_total_albedo_area_m2": 6.236385908913042,
+  "egi_true_total_albedo_area_m2": 5.0,
+  "egi_capture_frac_15deg": 0.7648406753334085,
+  "egi_residual_rms": 1.1469709676694761,
+  "n_glints_clipped": 2149
+}
