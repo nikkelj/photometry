@@ -1,0 +1,26 @@
+{
+  "scenario": "katalyst_link__sun_point",
+  "sat": "katalyst_link",
+  "mode_true": "sun_point",
+  "real_altitude_km": 500,
+  "study_altitude_km": 620.0,
+  "n_detections": 18884,
+  "n_observers": 2392,
+  "sim_seconds": 16.4,
+  "classify_seconds": 65.8,
+  "period_ls_s": 5812.855980471929,
+  "hypothesis_costs": {
+    "sun_point": 1.0337323187397272,
+    "inertial_fit": 4.036459903658868,
+    "spin_fit": 4.256398418804031,
+    "lvlh_ops": 45.45653711660439,
+    "lvlh_low_drag": 60.15678368702421
+  },
+  "mode_best": "sun_point",
+  "mode_expected": "sun_point",
+  "mode_correct": true,
+  "egi_total_albedo_area_m2": 1.395642346531143,
+  "egi_total_specular_area_m2": 3.3544644672357684,
+  "egi_residual_rms": 1.1174318958662064,
+  "true_diffuse_albedo_area_m2": 5.0562000000000005
+}

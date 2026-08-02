@@ -269,6 +269,94 @@
     ]
   },
   {
+    "scenario": "katalyst_link__ops",
+    "sat": "katalyst_link",
+    "mode_true": "ops",
+    "real_altitude_km": 500,
+    "study_altitude_km": 620.0,
+    "n_detections": 26332,
+    "n_observers": 2465,
+    "sim_seconds": 19.2,
+    "classify_seconds": 36.3,
+    "period_ls_s": 1456.699758518916,
+    "hypothesis_costs": {
+      "lvlh_ops": 0.9438449300668662,
+      "spin_fit": 15.99320623085347,
+      "inertial_fit": 17.787053980808224,
+      "lvlh_low_drag": 58.076937853005106,
+      "sun_point": 574.5406638743698
+    },
+    "mode_best": "lvlh_ops",
+    "mode_expected": "lvlh_ops",
+    "mode_correct": true,
+    "egi_total_albedo_area_m2": 4.339087580942943,
+    "egi_total_specular_area_m2": 8.273330572738578,
+    "egi_residual_rms": 1.1676167683053174,
+    "true_diffuse_albedo_area_m2": 5.0562000000000005
+  },
+  {
+    "scenario": "katalyst_link__sun_point",
+    "sat": "katalyst_link",
+    "mode_true": "sun_point",
+    "real_altitude_km": 500,
+    "study_altitude_km": 620.0,
+    "n_detections": 18884,
+    "n_observers": 2392,
+    "sim_seconds": 16.4,
+    "classify_seconds": 65.8,
+    "period_ls_s": 5812.855980471929,
+    "hypothesis_costs": {
+      "sun_point": 1.0337323187397272,
+      "inertial_fit": 4.036459903658868,
+      "spin_fit": 4.256398418804031,
+      "lvlh_ops": 45.45653711660439,
+      "lvlh_low_drag": 60.15678368702421
+    },
+    "mode_best": "sun_point",
+    "mode_expected": "sun_point",
+    "mode_correct": true,
+    "egi_total_albedo_area_m2": 1.395642346531143,
+    "egi_total_specular_area_m2": 3.3544644672357684,
+    "egi_residual_rms": 1.1174318958662064,
+    "true_diffuse_albedo_area_m2": 5.0562000000000005
+  },
+  {
+    "scenario": "katalyst_link__tumble",
+    "sat": "katalyst_link",
+    "mode_true": "tumble",
+    "real_altitude_km": 500,
+    "study_altitude_km": 620.0,
+    "n_detections": 26857,
+    "n_observers": 2498,
+    "sim_seconds": 17.2,
+    "classify_seconds": 70.9,
+    "period_ls_s": 5812.762312633833,
+    "hypothesis_costs": {
+      "spin_fit": 1.0176627581939448,
+      "inertial_fit": 48.333161403756606,
+      "lvlh_low_drag": 92.3081477419605,
+      "lvlh_ops": 103.79481584730497,
+      "sun_point": 613.3890260114503
+    },
+    "mode_best": "spin_fit",
+    "mode_expected": "spin_fit",
+    "mode_correct": true,
+    "egi_total_albedo_area_m2": 4.548807393623639,
+    "egi_total_specular_area_m2": 2.0154487387097806,
+    "egi_residual_rms": 1.1626295179020958,
+    "true_diffuse_albedo_area_m2": 5.0562000000000005,
+    "spin_period_est_s": 127.40000736451535,
+    "spin_pole_est_radec_deg": [
+      199.94384748214975,
+      35.03797171546131
+    ],
+    "spin_body_axis_est": [
+      1.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
     "scenario": "starlink_v15__low_drag",
     "sat": "starlink_v15",
     "mode_true": "low_drag",

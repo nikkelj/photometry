@@ -42,16 +42,18 @@ unobservable).
 
 ## Day-in-the-life fleet study
 
-Six library satellites built from open-source dimensions — Starlink v1.5
+Seven library satellites built from open-source dimensions — Starlink v1.5
 (one 1-axis shoulder array), Starlink v2 mini (two 2-axis shoulder+wrist
 arrays), v2 mini DTC (adds a half-bus-length nadir antenna panel),
-BlueWalker 3 (bus centered in a fixed 8x8 m array), Hubble, and the ISS —
-each simulated for 24 h in several attitude / array-pointing modes
-(nadir-hold ops with sun-tracking arrays, knife-edge low-drag, sun-point,
-inertial science pointing, propeller tumble). 17 scenarios total
-(`photometry/scenarios.py`, results in `results/fleet/`).
+BlueWalker 3 (bus centered in a fixed 8x8 m array), Hubble, the ISS, and
+Katalyst's LINK servicer (Swift reboost mission, launched 2026-07-03 and
+currently in a multi-axis spin after losing two of three reaction
+wheels) — each simulated for 24 h in several attitude / array-pointing
+modes (nadir-hold ops with sun-tracking arrays, knife-edge low-drag,
+sun-point, inertial science pointing, propeller tumble). 20 scenarios
+total (`photometry/scenarios.py`, results in `results/fleet/`).
 
-- **Mode classification: 16/17 correct** against a hypothesis bank of
+- **Mode classification: 19/20 correct** against a hypothesis bank of
   {LVLH-hold, knife-edge, sun-point, fitted uniform spin, fitted fixed
   inertial attitude}. The one miss is physics, not software: Hubble
   tumbling about its own cylinder axis is photometrically near-static
@@ -66,6 +68,11 @@ inertial science pointing, propeller tumble). 17 scenarios total
   the articulation law, as the classifier's forward model does.
 - ISS is saturation-limited (star trackers cap at mag -1) yet still
   classifies correctly from ~3-6k unsaturated long-range detections.
+- The LINK tumble scenario — the shape of practical interest given the
+  spacecraft's actual anomaly — recovers spin period exactly (127.4 s),
+  pole to 0.07°, and the correct body spin axis (the asymmetric
+  bus-plus-wings geometry breaks the axis degeneracy that flat panel
+  sats suffer); movie attitude error 0.1° against nav truth.
 - Per-scenario LVLH validation movies (truth shape at truth attitude vs
   inverted EGI disks at estimated attitude, with projections onto the
   three LVLH planes) are in `results/movies/` — regenerate with
