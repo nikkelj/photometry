@@ -74,9 +74,28 @@ total (`photometry/scenarios.py`, results in `results/fleet/`).
   bus-plus-wings geometry breaks the axis degeneracy that flat panel
   sats suffer); movie attitude error 0.1° against nav truth.
 - Per-scenario LVLH validation movies (truth shape at truth attitude vs
-  inverted EGI disks at estimated attitude, with projections onto the
+  the inverted product at estimated attitude, with projections onto the
   three LVLH planes) are in `results/movies/` — regenerate with
-  `python scripts/make_movies.py`.
+  `python scripts/make_movies.py`. The inverted product renders as two
+  layers: a Minkowski-reconstructed convex solid (face normals/areas
+  matched to the recovered EGI) and the raw EGI disks (oriented area,
+  exploded outward — photometry recovers no position information).
+
+## Library model identification
+
+`scripts/run_model_match.py` treats a scenario's observations as an
+unknown target and sweeps the full model library x attitude hypotheses x
+array configurations, scoring each with the photometric forward model.
+The photometric offset carries a 0.5-mag prior instead of being free, so
+absolute brightness (range is known) lets size discriminate between
+models. On seven representative scenarios: **7/7 correct
+model + attitude-mode + array-config identifications**, including
+separating Starlink v2 mini DTC from the plain v2 mini (the
+half-bus-length nadir antenna panel is photometrically detectable:
+best-fit cost 1.09 vs 2.64 for the non-DTC model) and identifying that
+ISS/v2-mini arrays were sun-tracking rather than frozen.
+
+![model match](results/charts/08_model_match.png)
 
 ![fleet modes](results/charts/06_fleet_modes.png)
 ![fleet EGI](results/charts/07_fleet_egi.png)
