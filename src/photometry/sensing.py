@@ -96,8 +96,10 @@ def simulate_detections(
                     t_s=float(t),
                     obs_id=int(sat_idx[j]),
                     tracker_id=int(t_i[j]),
-                    obs_pos_km=r_sat[sat_idx[j]],
-                    los_eci=los[n_i[j]],
+                    # copy: row views would pin every per-step state array
+                    # in memory for the whole run
+                    obs_pos_km=r_sat[sat_idx[j]].copy(),
+                    los_eci=los[n_i[j]].copy(),
                     sun_eci=sun,
                     range_km=float(rng_km[sat_idx[j]]),
                     mag=float(mag_true[j] + rng.normal(0, sensors.mag_noise_sigma)),
