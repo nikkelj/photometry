@@ -88,14 +88,50 @@ unknown target and sweeps the full model library x attitude hypotheses x
 array configurations, scoring each with the photometric forward model.
 The photometric offset carries a 0.5-mag prior instead of being free, so
 absolute brightness (range is known) lets size discriminate between
-models. On seven representative scenarios: **7/7 correct
+models. Across all 20 scenarios: **19/20 correct
 model + attitude-mode + array-config identifications**, including
 separating Starlink v2 mini DTC from the plain v2 mini (the
 half-bus-length nadir antenna panel is photometrically detectable:
 best-fit cost 1.09 vs 2.64 for the non-DTC model) and identifying that
 ISS/v2-mini arrays were sun-tracking rather than frozen.
 
+The one miss is diagnostic gold: the tumbling ISS identifies as "Hubble"
+— but at cost 42 where correct matches typically score ~1, i.e. *nothing*
+fits, and a real product would report "no confident match". The cause is
+saturation censoring: detections brighter than the tracker cap are
+discarded, so the surviving photometry looks like a much smaller object.
+The fix is a truncated (censored) likelihood — future work.
+
 ![model match](results/charts/08_model_match.png)
+
+## Matched-model refinement and residual EGI
+
+`inversion/refine.py` promotes the match winner to a refined product:
+full-resolution attitude re-fit plus a **signed residual EGI** solved on
+top of the matched model. Deviations from the catalog appear as localized
+signed oriented area; a catalog-true target leaves noise. Demo
+(`scripts/run_refine.py`, chart 09): matching the DTC scenario against
+the *plain* v2 mini model recovers +0.55 m² of residual area within 25°
+of the missing antenna's nadir normal (residual rms 1.57 → 1.02), while
+both correct-model control cases stay flat at the noise floor.
+
+![residual EGI](results/charts/09_residual_egi.png)
+
+## Shape reconstruction
+
+`inversion/minkowski.py` reconstructs the convex body whose face
+normals/areas match the recovered EGI. The default solver is
+variational — minimize the support functional `(a·h)/V(h)^(1/3)` with
+the analytic gradient `dV/dh_i = A_i(h)` — which converges slab-like
+EGIs to correct proportions (e.g. Starlink v1.5 recovers a
+7.7 × 3.7 × 1.0 m slab against the true 8.1 × 2.7 m array) where a
+per-face fixed-point stalls; the fixed point remains as fallback.
+
+Validation movies (`results/movies/`) use a split layout: left, the
+model-free inversion (Minkowski hull + raw EGI disks) against truth;
+right, the Tier-2 identified library model at the identified attitude
+and array articulation over faint truth — with 2D projections onto the
+three LVLH planes below.
 
 ![fleet modes](results/charts/06_fleet_modes.png)
 ![fleet EGI](results/charts/07_fleet_egi.png)

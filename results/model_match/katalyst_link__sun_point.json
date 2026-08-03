@@ -1,0 +1,42 @@
+{
+  "scenario": "katalyst_link__sun_point",
+  "true_model": "katalyst_link",
+  "true_mode": "sun_point",
+  "identified_model": "katalyst_link",
+  "identified_hypothesis": "sun_point",
+  "identified_arrays_tracking": false,
+  "correct_model": true,
+  "match_seconds": 290.4,
+  "best_cost_per_model": {
+    "katalyst_link": 0.9429252497859084,
+    "iss": 1.1211712728128826,
+    "bluewalker3": 2.974957600413646,
+    "starlink_v2mini": 2.9881954828325448,
+    "box_wing": 3.157831871345035,
+    "starlink_v2mini_dtc": 3.2034803331462114,
+    "starlink_v15": 3.32555870959837,
+    "hubble": 4.9692293056292005
+  },
+  "top5": [
+    {
+      "label": "katalyst_link | sun_point | arrays frozen",
+      "cost": 0.9429252497859084
+    },
+    {
+      "label": "iss | sun_point | arrays tracking",
+      "cost": 1.1211712728128826
+    },
+    {
+      "label": "iss | sun_point | arrays frozen",
+      "cost": 1.1211712728128829
+    },
+    {
+      "label": "katalyst_link | sun_point | arrays tracking",
+      "cost": 2.967103976289708
+    },
+    {
+      "label": "bluewalker3 | sun_point | arrays frozen",
+      "cost": 2.974957600413646
+    }
+  ]
+}
