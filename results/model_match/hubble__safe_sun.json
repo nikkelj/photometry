@@ -1,0 +1,42 @@
+{
+  "scenario": "hubble__safe_sun",
+  "true_model": "hubble",
+  "true_mode": "safe_sun",
+  "identified_model": "hubble",
+  "identified_hypothesis": "sun_point",
+  "identified_arrays_tracking": false,
+  "correct_model": true,
+  "match_seconds": 305.7,
+  "best_cost_per_model": {
+    "hubble": 0.9819707824992887,
+    "katalyst_link": 42.89711354244449,
+    "box_wing": 55.665824035142165,
+    "iss": 60.272697567948164,
+    "bluewalker3": 67.94399054897181,
+    "starlink_v15": 78.47569549802004,
+    "starlink_v2mini": 91.24569933107244,
+    "starlink_v2mini_dtc": 94.28317216225156
+  },
+  "top5": [
+    {
+      "label": "hubble | sun_point | arrays frozen",
+      "cost": 0.9819707824992887
+    },
+    {
+      "label": "hubble | sun_point | arrays tracking",
+      "cost": 3.9482740486674937
+    },
+    {
+      "label": "hubble | inertial_fit | arrays frozen",
+      "cost": 7.113911788819871
+    },
+    {
+      "label": "hubble | spin_fit | arrays frozen",
+      "cost": 19.21166518785456
+    },
+    {
+      "label": "katalyst_link | spin_fit | arrays frozen",
+      "cost": 42.89711354244449
+    }
+  ]
+}

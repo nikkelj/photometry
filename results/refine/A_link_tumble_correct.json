@@ -1,0 +1,21 @@
+{
+  "case": "A_link_tumble_correct",
+  "scenario": "katalyst_link__tumble",
+  "model": "katalyst_link",
+  "hypothesis": "spin_fit",
+  "arrays_tracking": false,
+  "cost_coarse": 1.0131222185347777,
+  "cost_refined": 1.0073463787202994,
+  "residual_rms_before": 1.0113917666434795,
+  "residual_rms_after": 0.9869866566037359,
+  "spin_refined": [
+    200.03900581271176,
+    35.004448792228786,
+    127.39998067311164,
+    0.7010616542352182,
+    1.0,
+    0.0,
+    0.0
+  ],
+  "peak_residual_albedo_area": -0.017871509450324535
+}

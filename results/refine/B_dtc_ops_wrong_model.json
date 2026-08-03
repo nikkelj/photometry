@@ -1,0 +1,13 @@
+{
+  "case": "B_dtc_ops_wrong_model",
+  "scenario": "starlink_v2mini_dtc__ops",
+  "model": "starlink_v2mini",
+  "hypothesis": "lvlh_ops",
+  "arrays_tracking": true,
+  "cost_coarse": 2.5926363247881192,
+  "cost_refined": 2.5926363247881192,
+  "residual_rms_before": 1.5700475197600507,
+  "residual_rms_after": 1.0209612731974365,
+  "spin_refined": null,
+  "peak_residual_albedo_area": 0.08407938284473523
+}
