@@ -159,3 +159,19 @@ def test_minkowski_cube_reconstruction():
     ext = v.max(0) - v.min(0)
     assert np.all(np.abs(ext - 2.0) < 0.4)  # ~2 m cube
     assert np.abs(v.mean(0)).max() < 0.2  # recentered near origin
+
+
+def test_minkowski_thin_plate_variational():
+    from photometry.inversion.minkowski import reconstruct_hull
+    normals = np.array([[0, 0, 1], [0, 0, -1], [1, 0, 0],
+                        [-1, 0, 0], [0, 1, 0], [0, -1, 0]], dtype=float)
+    areas = np.array([21.87, 21.87, 0.27, 0.27, 0.81, 0.81])
+    faces = reconstruct_hull(normals, areas)
+    egi = [f for f in faces if not f.is_closure]
+    total = sum(f.area for f in egi)
+    assert abs(total - areas.sum()) / areas.sum() < 0.05  # area matched
+    v = np.vstack([f.vertices for f in faces])
+    ext = np.sort(v.max(0) - v.min(0))
+    assert ext[0] < 0.4          # thin
+    assert 2.0 < ext[1] < 4.5    # ~2.7 wide
+    assert 5.5 < ext[2] < 10.0   # ~8.1 long

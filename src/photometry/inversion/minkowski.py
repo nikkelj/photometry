@@ -60,18 +60,119 @@ def _poly_area(p: np.ndarray, n: np.ndarray) -> float:
     return float(abs(cross @ n) / 2)
 
 
+def reconstruct_hull_variational(
+    normals: np.ndarray,
+    areas: np.ndarray,
+    n_cage: int = 42,
+    cage_area_frac: float = 0.02,
+    max_iter: int = 400,
+) -> list[HullFace]:
+    """Variational Minkowski solve: minimize the support functional.
+
+    Minimizing G(h) = (a . h) / V(h)^(1/3) over support distances h > 0
+    drives the polytope's face areas proportional to the targets a — the
+    classical variational formulation of Minkowski's problem, so slab-like
+    EGIs converge to the right proportions where the fixed-point iteration
+    stalls (a plate face's area is controlled by the *other* planes, which
+    the per-face update cannot reach; the joint gradient can).
+
+    Gradient is analytic: dV/dh_i = A_i(h) (face area), V = (h . A)/3.
+    Cage directions carry a small area budget so one-hemisphere EGIs stay
+    bounded. A final uniform scale matches total EGI face area to target.
+    """
+    from scipy.optimize import minimize
+
+    normals = unit(np.asarray(normals, dtype=float))
+    areas = np.asarray(areas, dtype=float)
+    f = len(normals)
+    cage = fibonacci_sphere(n_cage)
+    all_n = np.vstack([normals, cage])
+    a = np.concatenate([areas,
+                        np.full(n_cage, cage_area_frac * areas.sum() / n_cage)])
+    side = np.sqrt(areas.max())
+    h_min = 0.02 * side
+
+    def face_areas(h: np.ndarray) -> np.ndarray:
+        polys = _face_polygons(all_n, h)
+        return np.array([
+            _poly_area(p, n) if p is not None else 0.0
+            for p, n in zip(polys, all_n)])
+
+    def fg(h: np.ndarray):
+        area_now = face_areas(h)
+        v = float(h @ area_now) / 3.0
+        if v <= 0:
+            return 1e9, np.zeros_like(h)
+        s = float(a @ h)
+        g = s / v ** (1 / 3)
+        grad = a / v ** (1 / 3) - (s / (3 * v ** (4 / 3))) * area_now
+        return g, grad
+
+    h0 = np.full(len(all_n), 0.5 * side)
+    res = minimize(fg, h0, jac=True, method="L-BFGS-B",
+                   bounds=[(h_min, None)] * len(all_n),
+                   options=dict(maxiter=max_iter, ftol=1e-12))
+    h = res.x
+    # uniform rescale: areas scale as h^2
+    achieved = face_areas(h)[:f].sum()
+    if achieved > 0:
+        h = h * np.sqrt(areas.sum() / achieved)
+
+    polys = _face_polygons(all_n, h)
+    faces = []
+    for i, p in enumerate(polys):
+        if p is None:
+            continue
+        area_i = _poly_area(p, all_n[i])
+        if area_i < 1e-6 * side**2:
+            continue
+        faces.append(HullFace(vertices=p, normal=all_n[i], area=area_i,
+                              is_closure=i >= f))
+    return _recentered(faces)
+
+
+def _recentered(faces: list[HullFace]) -> list[HullFace]:
+    if faces:
+        centroid = (sum(f.area * f.vertices.mean(axis=0) for f in faces)
+                    / sum(f.area for f in faces))
+        for face in faces:
+            face.vertices = face.vertices - centroid
+    return faces
+
+
 def reconstruct_hull(
     normals: np.ndarray,
     areas: np.ndarray,
     n_iter: int = 200,
     gamma: float = 0.25,
     n_cage: int = 122,
+    method: str = "variational",
 ) -> list[HullFace]:
     """Convex body matching (normals, target face areas) as well as possible.
 
     normals: (F,3) EGI directions with significant recovered area
     areas:   (F,) target physical face areas (m^2)
+    method "variational" (default) falls back to the fixed-point iteration
+    on failure; "fixed_point" forces the legacy solver.
     """
+    if method == "variational":
+        try:
+            faces = reconstruct_hull_variational(normals, areas)
+            if any(not f.is_closure for f in faces):
+                return faces
+        except Exception:
+            pass
+    return _reconstruct_hull_fixed_point(normals, areas, n_iter, gamma, n_cage)
+
+
+def _reconstruct_hull_fixed_point(
+    normals: np.ndarray,
+    areas: np.ndarray,
+    n_iter: int = 200,
+    gamma: float = 0.25,
+    n_cage: int = 122,
+) -> list[HullFace]:
+    """Legacy per-face fixed-point iteration (kept as fallback)."""
     normals = unit(np.asarray(normals, dtype=float))
     areas = np.asarray(areas, dtype=float)
     side = np.sqrt(areas.max())
