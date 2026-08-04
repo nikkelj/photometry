@@ -133,6 +133,52 @@ right, the Tier-2 identified library model at the identified attitude
 and array articulation over faint truth — with 2D projections onto the
 three LVLH planes below.
 
+## Censored-saturation likelihood
+
+Saturated streaks are recorded as brighter-than-cap lower bounds
+(`ObservationSet.censored`) instead of being dropped, and enter every
+matching/refinement cost as one-sided Tobit terms (`inversion/cost.py`).
+This restores the size information that censoring destroys: with attitude
+known, the ISS model now fits its own tumble data at cost 0.18 vs 8.8+
+for every impostor. The remaining open piece is *global attitude search*
+under ~80% censoring — the bright spin phases are exactly the censored
+ones, so the calibrated periodogram is blind (spin peak 60x below
+orbital harmonics); a censoring-aware coherent period ladder recovers
+the spin pole exactly and the second harmonic to 3%, but that residual
+period error breaks 24 h coherence. Documented path: harmonic-aware
+ladder extension. Operationally the case is already safe — the
+deviation alert flags the resulting misidentification.
+
+## Torque-free (non-principal-axis) dynamics
+
+`TorqueFreeTumble` integrates Euler's equations + attitude kinematics
+(energy conserved to 3e-8 over 2 h) as both truth model and fit target;
+the `katalyst_link__multiaxis_tumble` scenario mirrors LINK's real
+anomaly class. The Tier-3 fit (`inversion/torquefree.py`) is a
+window-laddered multi-start over inertia ratios + initial rate + initial
+attitude, evaluated through a solve_ivp quaternion path verified against
+truth (truth scores 1.04 through the exact fit machinery). Result:
+bus-frame attitude error vs nav truth **halves** relative to the best
+uniform-spin fit (97.8° → 50.7° in-window, 97.6° → 56.0° over a 4 h
+prediction), recovering the dominant rate component (omega_x 0.047 vs
+0.049 rad/s truth) — but full convergence to the global basin exceeds
+Nelder-Mead; CMA-ES or differentiable-dynamics gradients are the
+documented upgrade path.
+
+## Catalog-deviation alerting
+
+`inversion/deviation.py` + `scripts/run_deviation_scan.py`: refine every
+scenario against its identified model, alert on residual structure
+(rms ratio > 1.15) or poor fit (refined cost > 8). **20/21 decisions
+correct** across the fleet plus a seeded-deviation control; getting there
+required refinement to search the discrete symmetry group (90° body-axis
+swaps, 180° flips, pole antipodes) and matching to score fitted attitude
+families under both array configurations. The one flagged
+"false positive" (Hubble's axisymmetric tumble) is arguably a true
+positive: the alert correctly reports that the identified inertial
+attitude cannot explain the frozen arrays sweeping with the real
+rotation.
+
 ![fleet modes](results/charts/06_fleet_modes.png)
 ![fleet EGI](results/charts/07_fleet_egi.png)
 

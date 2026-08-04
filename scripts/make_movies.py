@@ -33,7 +33,8 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from photometry import scenarios as sc
-from photometry.attitude import FixedInertial, LvlhHold, PrincipalAxisSpin
+from photometry.attitude import (FixedInertial, LvlhHold, PrincipalAxisSpin,
+                                 TorqueFreeTumble)
 from photometry.frames import in_earth_shadow, lvlh_basis, minimal_rotation_between, unit
 from photometry.inversion.minkowski import hull_from_egi
 from photometry.shapes import GIMBAL_FIXED, LIBRARY
@@ -170,10 +171,23 @@ def render_movie(name: str, fleet_dir: Path, out_dir: Path) -> Path:
     att_match = attitude_from_spec(ident["hypothesis"], ident["spin"], orbit, sun)
     match_articulate = ident["arrays_tracking"] and match_shape.articulated
 
+    # a Tier-3 torque-free fit, when present, supersedes the uniform spin
+    tf_path = fleet_dir / name / "torquefree.json"
+    if tf_path.exists():
+        tf = json.loads(tf_path.read_text())
+        att_match = TorqueFreeTumble(tuple(tf["inertia_est"]),
+                                     tuple(tf["omega0_est"]),
+                                     np.array(tf["r0"]), t_max=90000.0,
+                                     dt=1.0, t_ref=tf["t_ref"])
+        ident["hypothesis"] = "torque_free"
+        ident["source"] = "Tier-3 torque-free fit"
+        ident["cost"] = tf.get("cost_torquefree_polished",
+                               tf.get("cost_torquefree", float("nan")))
+
     # frame cadence: resolve the spin for tumblers, one orbit for controlled
     p_orb = 2 * np.pi / orbit.mean_motion
     spin_p = result.get("spin_period_est_s")
-    fast = s.mode == "tumble" and spin_p and spin_p < 2000
+    fast = s.mode in ("tumble", "multiaxis_tumble") and spin_p and spin_p < 2000
     frame_dt = (spin_p / 10) if fast else (p_orb / N_FRAMES)
 
     # start the window where the target is sunlit
