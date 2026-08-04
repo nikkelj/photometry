@@ -14,9 +14,9 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .attitude import FixedInertial, LvlhHold, PrincipalAxisSpin
+from .attitude import FixedInertial, LvlhHold, PrincipalAxisSpin, TorqueFreeTumble
 from .constellation import WalkerConstellation
-from .frames import radec_to_unit
+from .frames import minimal_rotation_from_z, radec_to_unit
 from .sensing import SensorConfig
 from .shapes import LIBRARY
 
@@ -28,6 +28,12 @@ SUN_RA_DEG, SUN_DEC_DEG = 130.0, 15.0
 
 TUMBLE = dict(pole_ra_deg=200.0, pole_dec_deg=35.0, period_s=127.4, phase_rad=0.7)
 HUBBLE_TARGET_RA, HUBBLE_TARGET_DEC = 80.0, -20.0
+
+# non-principal-axis tumble truth (LINK anomaly-like): triaxial inertia,
+# initial rate tilted off the minor axis so omega nutates
+MULTIAXIS = dict(inertia=(1.0, 2.6, 3.2),
+                 omega0_body=(0.049, 0.006, 0.014),
+                 att_ra_deg=200.0, att_dec_deg=35.0)
 
 
 def study_orbit() -> WalkerConstellation:
@@ -42,8 +48,14 @@ def sun_eci() -> np.ndarray:
 
 
 def make_attitude(mode: str, orbit: WalkerConstellation, sun: np.ndarray,
-                  articulated_model: bool) -> tuple[object, bool]:
+                  articulated_model: bool,
+                  duration_s: float = 86400.0) -> tuple[object, bool]:
     """Attitude model + whether gimbaled facets actively track the sun."""
+    if mode == "multiaxis_tumble":
+        r0 = minimal_rotation_from_z(
+            radec_to_unit(MULTIAXIS["att_ra_deg"], MULTIAXIS["att_dec_deg"]))
+        return TorqueFreeTumble(MULTIAXIS["inertia"], MULTIAXIS["omega0_body"],
+                                r0, t_max=duration_s, dt=1.0), False
     if mode == "ops":
         return LvlhHold(orbit), articulated_model
     if mode == "low_drag":
@@ -105,6 +117,7 @@ SCENARIOS: list[FleetScenario] = [
     FleetScenario("katalyst_link", "ops", 500),
     FleetScenario("katalyst_link", "sun_point", 500),
     FleetScenario("katalyst_link", "tumble", 500),
+    FleetScenario("katalyst_link", "multiaxis_tumble", 500),
 ]
 
 

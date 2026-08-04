@@ -4,33 +4,33 @@
   "mode_true": "tumble",
   "real_altitude_km": 420,
   "study_altitude_km": 620.0,
-  "n_detections": 6253,
-  "n_observers": 1712,
-  "sim_seconds": 17.1,
-  "classify_seconds": 95.3,
+  "n_detections": 28343,
+  "n_observers": 2506,
+  "sim_seconds": 30.2,
+  "classify_seconds": 65.4,
   "period_ls_s": 2919.493257049448,
   "hypothesis_costs": {
-    "spin_fit": 49.07180559203119,
-    "inertial_fit": 74.96522522416466,
-    "lvlh_low_drag": 342.0162989820204,
-    "lvlh_ops": 353.35767457558234,
-    "sun_point": 501.7035317499434
+    "inertial_fit": 15.354601292313777,
+    "spin_fit": 18.726628019445258,
+    "lvlh_low_drag": 96.3364638074708,
+    "lvlh_ops": 99.16957852035651,
+    "sun_point": 141.9949065939372
   },
-  "mode_best": "spin_fit",
+  "mode_best": "inertial_fit",
   "mode_expected": "spin_fit",
-  "mode_correct": true,
-  "egi_total_albedo_area_m2": 728.5145052383428,
-  "egi_total_specular_area_m2": 2119.99750716789,
-  "egi_residual_rms": 1.3803815785538507,
+  "mode_correct": false,
+  "egi_total_albedo_area_m2": 317.77592705602274,
+  "egi_total_specular_area_m2": 474.83184681311576,
+  "egi_residual_rms": 1.5318646367222872,
   "true_diffuse_albedo_area_m2": 3156.6,
-  "spin_period_est_s": 5815.060727951573,
+  "spin_period_est_s": 2.324498211853226e+19,
   "spin_pole_est_radec_deg": [
-    19.075360145041802,
-    -33.99206440139277
+    82.76641077961304,
+    -14.645671897447421
   ],
   "spin_body_axis_est": [
     0.0,
-    1.0,
-    0.0
+    0.0,
+    1.0
   ]
 }

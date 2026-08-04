@@ -33,7 +33,8 @@ def run_scenario(s: sc.FleetScenario, outroot: Path) -> dict:
     sun = sc.sun_eci()
     shape = s.shape()
     att_true, articulate_true = sc.make_attitude(s.mode, orbit, sun,
-                                                 shape.articulated)
+                                                 shape.articulated,
+                                                 duration_s=s.duration_s)
 
     t0 = time.time()
     t_grid = np.arange(0.0, s.duration_s, s.dt_s)
@@ -72,7 +73,8 @@ def run_scenario(s: sc.FleetScenario, outroot: Path) -> dict:
     # truth-mode expectation for scoring the classifier
     expected = {"ops": "lvlh_ops", "low_drag": "lvlh_low_drag",
                 "tumble": "spin_fit", "sun_point": "sun_point",
-                "science": "inertial_fit", "safe_sun": "sun_point"}[s.mode]
+                "science": "inertial_fit", "safe_sun": "sun_point",
+                "multiaxis_tumble": "spin_fit"}[s.mode]
     # sun_point and inertial_fit describe the same physical attitude family;
     # accept inertial_fit when a fixed sun-pointing truth is recovered
     accept = {expected} | ({"inertial_fit"} if expected == "sun_point" else set())

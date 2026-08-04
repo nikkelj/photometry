@@ -89,8 +89,15 @@ def simulate_detections(
         mag_true = apparent_magnitude(target_shape, u_sun_body, u_obs_body,
                                       rng_km[sat_idx], normals=normals)
 
-        detectable = (mag_true < sensors.limiting_mag) & (mag_true > sensors.saturation_mag)
+        detectable = mag_true < sensors.limiting_mag
+        saturated = mag_true <= sensors.saturation_mag
         for j in np.nonzero(detectable)[0]:
+            # saturated streaks are still detections: the object is known
+            # to be brighter than the cap, so record a censored row with
+            # mag = cap rather than dropping the event
+            cens = bool(saturated[j])
+            mag = (sensors.saturation_mag if cens
+                   else float(mag_true[j] + rng.normal(0, sensors.mag_noise_sigma)))
             rows.append(
                 dict(
                     t_s=float(t),
@@ -102,9 +109,10 @@ def simulate_detections(
                     los_eci=los[n_i[j]].copy(),
                     sun_eci=sun,
                     range_km=float(rng_km[sat_idx[j]]),
-                    mag=float(mag_true[j] + rng.normal(0, sensors.mag_noise_sigma)),
-                    mag_sigma=sensors.mag_noise_sigma,
+                    mag=mag,
+                    mag_sigma=0.3 if cens else sensors.mag_noise_sigma,
                     sensor_bias=0.0,
+                    censored=int(cens),
                 )
             )
 
@@ -125,4 +133,5 @@ def simulate_detections(
         mag=col("mag"),
         mag_sigma=col("mag_sigma"),
         sensor_bias=col("sensor_bias"),
+        censored=col("censored").astype(int),
     )

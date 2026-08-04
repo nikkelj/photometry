@@ -34,6 +34,10 @@ class ObservationSet:
     mag_sigma:   (K,) 1-sigma magnitude uncertainty
     sensor_bias: (K,) per-sensor residual zero-point bias estimate (mag);
                  zero in simulation, populated by calibration on real data
+    censored:    (K,) 1 for saturated detections: the target was detected
+                 but brighter than the sensor cap, so `mag` records the
+                 saturation limit and the true magnitude is <= mag (a
+                 lower bound on brightness). 0 for calibrated photometry.
     """
 
     t_s: np.ndarray
@@ -46,6 +50,11 @@ class ObservationSet:
     mag: np.ndarray
     mag_sigma: np.ndarray
     sensor_bias: np.ndarray
+    censored: np.ndarray = None
+
+    def __post_init__(self) -> None:
+        if self.censored is None:
+            self.censored = np.zeros(len(self.t_s), dtype=int)
 
     def __len__(self) -> int:
         return len(self.t_s)
@@ -73,10 +82,15 @@ class ObservationSet:
     def to_npz(self, path: str) -> None:
         np.savez_compressed(path, **{f.name: getattr(self, f.name) for f in fields(self)})
 
+    def uncensored(self) -> "ObservationSet":
+        """Subset with calibrated (non-saturated) photometry only."""
+        return self.subset(np.nonzero(self.censored == 0)[0])
+
     @classmethod
     def from_npz(cls, path: str) -> "ObservationSet":
         with np.load(path) as z:
-            return cls(**{f.name: z[f.name] for f in fields(cls)})
+            return cls(**{f.name: z[f.name] for f in fields(cls)
+                          if f.name in z.files})
 
     def to_csv(self, path: str) -> None:
         cols: list[tuple[str, np.ndarray]] = []
@@ -102,9 +116,9 @@ class ObservationSet:
                 kwargs[f.name] = np.stack(
                     [data[f"{f.name}_{s}"] for s in "xyz"], axis=-1
                 )
-            else:
+            elif f.name in data.dtype.names:
                 arr = data[f.name]
-                if f.name in ("obs_id", "tracker_id"):
+                if f.name in ("obs_id", "tracker_id", "censored"):
                     arr = arr.astype(int)
                 kwargs[f.name] = arr
         return cls(**kwargs)

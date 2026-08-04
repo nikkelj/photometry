@@ -122,6 +122,86 @@ class FixedInertial:
         return self.r_bi
 
 
+@dataclass
+class TorqueFreeTumble:
+    """Torque-free rigid-body rotation for a triaxial inertia tensor.
+
+    Integrates Euler's equations (body frame) and the attitude kinematics
+    R_dot = R [omega]x with RK4 onto a table at `dt` resolution, then
+    evaluates R(t) with an exact-in-omega sub-step rotation. This is the
+    general non-principal-axis tumble: omega nutates around the angular
+    momentum vector unless started on a principal axis.
+
+    inertia: principal moments (I1, I2, I3), any scale (ratios matter)
+    omega0_body: initial body-frame rate vector (rad/s)
+    r0: body-to-ECI attitude at t = t_ref
+    """
+
+    inertia: tuple[float, float, float]
+    omega0_body: tuple[float, float, float]
+    r0: np.ndarray
+    t_max: float
+    dt: float = 0.5
+    t_ref: float = 0.0
+
+    _r_table: np.ndarray = field(init=False, repr=False)
+    _w_table: np.ndarray = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        i_diag = np.asarray(self.inertia, dtype=float)
+        inv_i = 1.0 / i_diag
+
+        def wdot(w):
+            return inv_i * (-np.cross(w, i_diag * w))
+
+        n = int(np.ceil(self.t_max / self.dt)) + 2
+        r_tab = np.empty((n, 3, 3))
+        w_tab = np.empty((n, 3))
+        r = np.asarray(self.r0, dtype=float).copy()
+        w = np.asarray(self.omega0_body, dtype=float).copy()
+        h = self.dt
+        for k in range(n):
+            r_tab[k], w_tab[k] = r, w
+            # RK4 for omega; attitude via exact rotation about mid-step omega
+            k1 = wdot(w)
+            k2 = wdot(w + 0.5 * h * k1)
+            k3 = wdot(w + 0.5 * h * k2)
+            k4 = wdot(w + h * k3)
+            w_mid = w + (h / 12.0) * (k1 + 4 * k2 + k3)  # ~mid-step rate
+            w = w + (h / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
+            ang = np.linalg.norm(w_mid) * h
+            if ang > 0:
+                r = r @ rodrigues(w_mid / np.linalg.norm(w_mid), ang)
+            if k % 200 == 0:  # re-orthonormalize
+                u, _, vt = np.linalg.svd(r)
+                r = u @ vt
+        self._r_table, self._w_table = r_tab, w_tab
+
+    def _r_at(self, t: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        tt = np.clip(np.asarray(t, dtype=float) - self.t_ref, 0.0, self.t_max)
+        k = np.clip((tt / self.dt).astype(int), 0, len(self._r_table) - 1)
+        return self._r_table[k], self._w_table[k], tt - k * self.dt
+
+    def eci_to_body(self, t: np.ndarray, v_eci: np.ndarray) -> np.ndarray:
+        r_k, w_k, dt_sub = self._r_at(t)
+        v0 = np.einsum("kji,kj->ki", r_k, v_eci)  # R_k^T v
+        wn = np.linalg.norm(w_k, axis=-1)
+        ok = wn > 0
+        axis = np.where(ok[:, None], w_k / np.maximum(wn, 1e-15)[:, None], 0.0)
+        theta = -(wn * dt_sub)  # inverse of the sub-step body rotation
+        c, s = np.cos(theta)[:, None], np.sin(theta)[:, None]
+        return (v0 * c + np.cross(axis, v0) * s
+                + axis * np.sum(axis * v0, axis=-1, keepdims=True) * (1 - c))
+
+    def body_to_eci_matrix(self, t: float) -> np.ndarray:
+        r_k, w_k, dt_sub = self._r_at(np.atleast_1d(float(t)))
+        r_k, w_k, dt_sub = r_k[0], w_k[0], float(dt_sub[0])
+        wn = float(np.linalg.norm(w_k))
+        if wn == 0:
+            return r_k
+        return r_k @ rodrigues(w_k / wn, wn * dt_sub)
+
+
 def spin_body_directions(
     pole: np.ndarray, period_s: float, phase_rad: float, t: np.ndarray,
     v_eci: np.ndarray, body_axis: np.ndarray | tuple = (0.0, 0.0, 1.0)

@@ -80,6 +80,7 @@ def grid_search_pole(
     differ enormously, so it is part of the hypothesis space.
     """
     rng = np.random.default_rng(seed)
+    obs = obs.uncensored()  # saturated rows carry no calibrated magnitude
     if len(obs) > max_obs:
         obs = obs.subset(np.sort(rng.choice(len(obs), max_obs, replace=False)))
 
@@ -153,3 +154,79 @@ def pole_error_deg(est_pole: np.ndarray, true_pole: np.ndarray) -> float:
     """Angular error, accounting for the spin-axis sign ambiguity."""
     c = abs(float(np.dot(unit(est_pole), unit(true_pole))))
     return float(np.degrees(np.arccos(np.clip(c, -1, 1))))
+
+
+def ladder_spin_search(
+    obs: ObservationSet,
+    shape: FacetModel,
+    period_range_s: tuple[float, float] = (40.0, 800.0),
+    window_s: float = 2000.0,
+    n_poles: int = 120,
+    n_phases: int = 10,
+    max_obs: int = 1500,
+    seed: int = 0,
+    body_axes: tuple = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+    offset_sigma: float | None = None,
+) -> PoleSolution:
+    """Coherent period-ladder spin search for when the periodogram fails.
+
+    Over a long arc the cost basin in period has width ~P^2/arc (sub-second
+    for a day), far too narrow for any coarse sweep. So: (1) dense period
+    grid on a short window, spaced at the window's own basin width
+    P^2/(2*window) so no basin is skipped; (2) grid over pole x phase x
+    body axis at each candidate; (3) re-polish (period, phase, pole) over
+    progressively longer arcs, each stage's accuracy bracketing the next
+    stage's basin.
+    """
+    obs = obs.uncensored()
+    t0 = float(obs.t_s.min())
+    arc = float(obs.t_s.max() - t0)
+
+    # ladder-density period candidates for the window
+    periods = []
+    p = period_range_s[0]
+    while p <= period_range_s[1]:
+        periods.append(p)
+        p += p * p / (2.0 * window_s)
+    win = obs.subset(np.nonzero(obs.t_s <= t0 + window_s)[0])
+    sol = grid_search_pole(win, shape, candidate_periods=periods,
+                           n_poles=n_poles, n_phases=n_phases, max_obs=max_obs,
+                           seed=seed, body_axes=body_axes,
+                           offset_sigma=offset_sigma)
+
+    # extend coherence: refine on growing arcs
+    span = window_s
+    while span < arc:
+        span = min(4 * span, arc)
+        sub = obs.subset(np.nonzero(obs.t_s <= t0 + span)[0])
+        rng = np.random.default_rng(seed)
+        if len(sub) > max_obs:
+            sub = sub.subset(np.sort(rng.choice(len(sub), max_obs, replace=False)))
+        meas_mag = -2.5 * np.log10(np.clip(sub.normalized_brightness(), 1e-6, None))
+        w = 1.0 / np.maximum(sub.mag_sigma, 1e-3) ** 2
+        axis = sol.body_axis
+
+        def objective(x):
+            ra, dec, per, ph = x
+            pole = np.array([np.cos(np.radians(dec)) * np.cos(np.radians(ra)),
+                             np.cos(np.radians(dec)) * np.sin(np.radians(ra)),
+                             np.sin(np.radians(dec))])
+            return _cost(shape, pole, per, ph, sub, meas_mag, w, axis,
+                         offset_sigma)
+
+        res = minimize(objective,
+                       x0=[sol.pole_ra_deg, sol.pole_dec_deg, sol.period_s,
+                           sol.phase_rad],
+                       method="Nelder-Mead",
+                       options=dict(maxiter=500, xatol=1e-4, fatol=1e-7))
+        ra, dec, per, ph = res.x
+        pole = unit(np.array([np.cos(np.radians(dec)) * np.cos(np.radians(ra)),
+                              np.cos(np.radians(dec)) * np.sin(np.radians(ra)),
+                              np.sin(np.radians(dec))]))
+        sol = PoleSolution(pole=pole, period_s=float(per),
+                           phase_rad=float(ph % (2 * np.pi)),
+                           cost=float(res.fun), pole_ra_deg=float(ra % 360),
+                           pole_dec_deg=float(dec),
+                           grid_poles=sol.grid_poles, grid_costs=sol.grid_costs,
+                           body_axis=axis)
+    return sol

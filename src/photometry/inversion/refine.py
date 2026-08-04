@@ -23,10 +23,11 @@ import numpy as np
 from scipy.optimize import minimize
 
 from ..attitude import PrincipalAxisSpin
-from ..frames import fibonacci_sphere, radec_to_unit
+from ..frames import fibonacci_sphere
 from ..measurements import ObservationSet
 from ..radiometry import facet_brightness
 from ..shapes import FacetModel
+from .cost import huber_mag_cost, prepare_meas
 from .egi import lambert_design_matrix
 
 
@@ -41,19 +42,6 @@ class RefinementResult:
     residual_albedo_area: np.ndarray  # (C,) SIGNED rho*A deviation vs model
     residual_rms_before: float      # weighted rms of (meas - model) brightness
     residual_rms_after: float       # ... after removing the residual-EGI fit
-
-
-def _mag_cost(shape, attitude, articulate, obs, meas_mag, w, offset_sigma):
-    u_s = attitude.eci_to_body(obs.t_s, obs.sun_eci)
-    u_o = attitude.eci_to_body(obs.t_s, obs.u_obs_from_target())
-    normals = shape.body_normals(u_s, articulate=articulate)
-    b = facet_brightness(shape, u_s, u_o, normals).sum(axis=0)
-    dm = meas_mag - (-2.5 * np.log10(np.clip(b, 1e-9, None)))
-    o = np.sum(w * dm) / (np.sum(w) + 1.0 / offset_sigma**2)
-    r = np.sqrt(w) * (dm - o)
-    a = 3.0
-    rho = np.where(np.abs(r) < a, r**2, 2 * a * np.abs(r) - a**2)
-    return float(np.mean(rho) + (o / offset_sigma) ** 2 / len(dm))
 
 
 def refine_match(
@@ -73,11 +61,10 @@ def refine_match(
     sub = obs
     if len(obs) > max_obs:
         sub = obs.subset(np.sort(rng.choice(len(obs), max_obs, replace=False)))
-    meas_mag = -2.5 * np.log10(np.clip(sub.normalized_brightness(), 1e-6, None))
-    w = 1.0 / np.maximum(sub.mag_sigma, 1e-3) ** 2
+    prep = prepare_meas(sub)
 
-    cost_coarse = _mag_cost(shape, attitude, arrays_tracking, sub, meas_mag, w,
-                            offset_sigma)
+    cost_coarse = huber_mag_cost(shape, attitude, arrays_tracking, prep,
+                                 offset_sigma)
     refined_spin = spin_params
     if hypothesis in ("spin_fit", "inertial_fit") and spin_params is not None:
         ra0, dec0, per0, ph0, ax_, ay, az = spin_params
@@ -85,8 +72,7 @@ def refine_match(
 
         def objective(x):
             att = PrincipalAxisSpin(x[0], x[1], x[2], x[3], body_axis=axis)
-            return _mag_cost(shape, att, arrays_tracking, sub, meas_mag, w,
-                             offset_sigma)
+            return huber_mag_cost(shape, att, arrays_tracking, prep, offset_sigma)
 
         res = minimize(objective, x0=[ra0, dec0, per0, ph0],
                        method="Nelder-Mead",
@@ -95,10 +81,12 @@ def refine_match(
                         float(res.x[2]), float(res.x[3] % (2 * np.pi)),
                         *axis)
         attitude = PrincipalAxisSpin(*refined_spin[:4], body_axis=axis)
-    cost_refined = _mag_cost(shape, attitude, arrays_tracking, sub, meas_mag, w,
-                             offset_sigma)
+    cost_refined = huber_mag_cost(shape, attitude, arrays_tracking, prep,
+                                  offset_sigma)
 
     # --- signed residual EGI on top of the matched model ------------------
+    # calibrated rows only: censored rows carry no usable brightness value
+    sub = sub.uncensored()
     u_s = attitude.eci_to_body(sub.t_s, sub.sun_eci)
     u_o = attitude.eci_to_body(sub.t_s, sub.u_obs_from_target())
     normals = shape.body_normals(u_s, articulate=arrays_tracking)

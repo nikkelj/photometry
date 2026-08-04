@@ -41,20 +41,32 @@ class MatchResult:
         return f"{self.model} | {self.hypothesis} | {cfg}"
 
 
-def _huber_offset_cost(shape: FacetModel, attitude, articulate: bool,
-                       obs: ObservationSet, meas_mag: np.ndarray,
-                       w: np.ndarray, offset_sigma: float) -> float:
-    u_sun_body = attitude.eci_to_body(obs.t_s, obs.sun_eci)
-    u_obs_body = attitude.eci_to_body(obs.t_s, obs.u_obs_from_target())
-    normals = shape.body_normals(u_sun_body, articulate=articulate)
-    b = facet_brightness(shape, u_sun_body, u_obs_body, normals).sum(axis=0)
-    dm = meas_mag - (-2.5 * np.log10(np.clip(b, 1e-9, None)))
-    o = np.sum(w * dm) / (np.sum(w) + 1.0 / offset_sigma**2)
-    penalty = (o / offset_sigma) ** 2 / len(dm)
-    r = np.sqrt(w) * (dm - o)
-    a = 3.0
-    rho = np.where(np.abs(r) < a, r**2, 2 * a * np.abs(r) - a**2)
-    return float(np.mean(rho) + penalty)
+from .cost import huber_mag_cost, prepare_meas
+from .pole_search import ladder_spin_search
+
+
+def stratified_subsample(obs: ObservationSet, max_obs: int,
+                         rng: np.random.Generator,
+                         max_censored_frac: float = 0.35) -> ObservationSet:
+    """Subsample capping the censored fraction.
+
+    Heavily saturated targets (ISS-class) can be ~80% censored rows; an
+    unstratified draw then starves the attitude fit of calibrated
+    photometry. Censored rows still enter as brightness lower bounds, just
+    capped so they inform size without drowning the light-curve shape.
+    """
+    if len(obs) <= max_obs:
+        return obs
+    cal = np.nonzero(obs.censored == 0)[0]
+    cen = np.nonzero(obs.censored == 1)[0]
+    n_cen = min(len(cen), int(max_censored_frac * max_obs),
+                max_obs - min(len(cal), max_obs - int(max_censored_frac * max_obs)))
+    n_cal = min(len(cal), max_obs - n_cen)
+    pick = np.concatenate([
+        rng.choice(cal, n_cal, replace=False) if n_cal < len(cal) else cal,
+        rng.choice(cen, n_cen, replace=False) if n_cen < len(cen) else cen,
+    ])
+    return obs.subset(np.sort(pick))
 
 
 def match_library(
@@ -68,15 +80,19 @@ def match_library(
     n_poles: int = 150,
     n_phases: int = 10,
     seed: int = 0,
+    refine_top_k: int = 3,
 ) -> list[MatchResult]:
-    """Score every (model, attitude hypothesis, array config); ranked best-first."""
+    """Score every (model, attitude hypothesis, array config); ranked best-first.
+
+    Two stages: a coarse sweep over the full library, then a finer attitude
+    search (denser pole/phase grid, larger sample) for the top-k models —
+    a coarse grid can leave a hard-to-fit true model stuck behind a
+    mediocre-everywhere impostor.
+    """
     names = candidates or [n for n in LIBRARY if n != "rocket_body"]
     rng = np.random.default_rng(seed)
-    sub = obs
-    if len(obs) > max_obs:
-        sub = obs.subset(np.sort(rng.choice(len(obs), max_obs, replace=False)))
-    meas_mag = -2.5 * np.log10(np.clip(sub.normalized_brightness(), 1e-6, None))
-    w = 1.0 / np.maximum(sub.mag_sigma, 1e-3) ** 2
+    sub = stratified_subsample(obs, max_obs, rng)
+    prep = prepare_meas(sub)
 
     named = [
         ("lvlh_ops", LvlhHold(orbit)),
@@ -84,30 +100,59 @@ def match_library(
         ("sun_point", FixedInertial.z_toward(sun)),
     ]
 
-    results: list[MatchResult] = []
-    for name in names:
+    def score_model(name: str, sub_, prep_, np_, nph_, mo_,
+                    use_ladder=False) -> list[MatchResult]:
         shape = LIBRARY[name]()
+        out: list[MatchResult] = []
         art_options = (True, False) if shape.articulated else (False,)
         for hyp, att in named:
             for art in art_options:
-                c = _huber_offset_cost(shape, att, art, sub, meas_mag, w,
-                                       offset_sigma)
-                results.append(MatchResult(name, hyp, art, c))
+                c = huber_mag_cost(shape, att, art, prep_, offset_sigma)
+                out.append(MatchResult(name, hyp, art, c))
         for fam, periods, axes in [
             ("spin_fit", spin_candidate_periods,
              ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))),
             ("inertial_fit", [INERTIAL_PERIOD_S], ((0.0, 0.0, 1.0),)),
         ]:
-            sol = grid_search_pole(sub, shape, candidate_periods=periods,
-                                   n_poles=n_poles, n_phases=n_phases,
-                                   max_obs=max_obs, seed=seed, body_axes=axes,
-                                   offset_sigma=offset_sigma)
-            results.append(MatchResult(
-                name, fam, False, sol.cost,
+            if fam == "spin_fit" and use_ladder:
+                sol = ladder_spin_search(sub_, shape, window_s=3000.0,
+                                         max_obs=mo_, seed=seed,
+                                         offset_sigma=offset_sigma)
+            else:
+                sol = grid_search_pole(sub_, shape, candidate_periods=periods,
+                                       n_poles=np_, n_phases=nph_,
+                                       max_obs=mo_, seed=seed, body_axes=axes,
+                                       offset_sigma=offset_sigma)
+            # the grid search fits calibrated rows only; re-score with the
+            # shared censored cost so families rank on the same footing
+            att = PrincipalAxisSpin(sol.pole_ra_deg, sol.pole_dec_deg,
+                                    sol.period_s, sol.phase_rad,
+                                    body_axis=sol.body_axis)
+            c = huber_mag_cost(shape, att, False, prep_, offset_sigma)
+            out.append(MatchResult(
+                name, fam, False, c,
                 spin_params=(sol.pole_ra_deg, sol.pole_dec_deg, sol.period_s,
                              sol.phase_rad, *sol.body_axis)))
+        return out
 
+    results: list[MatchResult] = []
+    for name in names:
+        results.extend(score_model(name, sub, prep, n_poles, n_phases, max_obs))
     results.sort(key=lambda r: r.cost)
+
+    if refine_top_k > 0:
+        finalists = list(dict.fromkeys(r.model for r in results))[:refine_top_k]
+        sub2 = stratified_subsample(obs, 2 * max_obs, np.random.default_rng(seed + 1))
+        prep2 = prepare_meas(sub2)
+        # heavy saturation guts the periodogram (bright spin phases are the
+        # censored ones), so run the coherent period-ladder search instead
+        use_ladder = float(np.mean(obs.censored)) > 0.5
+        keep = [r for r in results if r.model not in finalists]
+        for name in finalists:
+            keep.extend(score_model(name, sub2, prep2, 2 * n_poles,
+                                    n_phases + 6, 2 * max_obs,
+                                    use_ladder=use_ladder))
+        results = sorted(keep, key=lambda r: r.cost)
     return results
 
 

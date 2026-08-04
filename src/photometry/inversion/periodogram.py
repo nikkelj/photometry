@@ -25,6 +25,7 @@ def brightness_periodogram(
     ~1/T_arc) so long arcs cannot step over a narrow spin peak; n_periods
     is a floor on the grid size. Returns (periods_s, normalized_power).
     """
+    obs = obs.uncensored()
     t, y0 = obs.t_s, obs.normalized_brightness()
     if len(t) > max_obs:
         idx = np.random.default_rng(seed).choice(len(t), max_obs, replace=False)

@@ -60,6 +60,9 @@ def solve_egi(
     seed: int = 0,
 ) -> EGISolution:
     rng = np.random.default_rng(seed)
+    ok = np.nonzero(obs.censored == 0)[0]
+    obs = obs.subset(ok)
+    u_sun_body, u_obs_body = u_sun_body[ok], u_obs_body[ok]
     k = len(obs)
     keep = np.arange(k)
     if k > max_obs:
