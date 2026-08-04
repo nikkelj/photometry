@@ -1,0 +1,15 @@
+{
+  "scenario": "starlink_v2mini_dtc__tumble",
+  "refined_model": "starlink_v2mini_dtc",
+  "truth_model": "starlink_v2mini_dtc",
+  "seeded_wrong": false,
+  "hypothesis": "spin_fit",
+  "alert": true,
+  "alert_correct": false,
+  "deviation_truth": false,
+  "rms_ratio": 2.6181280001574865,
+  "fit_quality": 7.038677202033236,
+  "peak_albedo_area": 0.03325709518023614,
+  "cluster_albedo_area": 0.12547811507838724,
+  "reason": "unexplained structure and poor overall fit"
+}

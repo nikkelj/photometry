@@ -1,0 +1,15 @@
+{
+  "scenario": "starlink_v15__tumble",
+  "refined_model": "starlink_v15",
+  "truth_model": "starlink_v15",
+  "seeded_wrong": false,
+  "hypothesis": "spin_fit",
+  "alert": true,
+  "alert_correct": false,
+  "deviation_truth": false,
+  "rms_ratio": 3.0483479732881174,
+  "fit_quality": 11.608592010549515,
+  "peak_albedo_area": -0.03929115366914426,
+  "cluster_albedo_area": -0.13618623799605323,
+  "reason": "unexplained structure and poor overall fit"
+}

@@ -1,0 +1,15 @@
+{
+  "scenario": "starlink_v15__ops",
+  "refined_model": "starlink_v15",
+  "truth_model": "starlink_v15",
+  "seeded_wrong": false,
+  "hypothesis": "lvlh_ops",
+  "alert": false,
+  "alert_correct": true,
+  "deviation_truth": false,
+  "rms_ratio": 1.0115872922330935,
+  "fit_quality": 0.9863940519258941,
+  "peak_albedo_area": -0.005799945311013123,
+  "cluster_albedo_area": -0.01595152059841858,
+  "reason": "consistent with catalog model"
+}

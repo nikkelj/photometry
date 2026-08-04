@@ -1,0 +1,15 @@
+{
+  "scenario": "starlink_v2mini__tumble",
+  "refined_model": "starlink_v2mini",
+  "truth_model": "starlink_v2mini",
+  "seeded_wrong": false,
+  "hypothesis": "spin_fit",
+  "alert": false,
+  "alert_correct": true,
+  "deviation_truth": false,
+  "rms_ratio": 1.0207994020272322,
+  "fit_quality": 1.0124548277727725,
+  "peak_albedo_area": -0.0114052795507374,
+  "cluster_albedo_area": -0.021794456040686,
+  "reason": "consistent with catalog model"
+}

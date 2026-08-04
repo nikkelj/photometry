@@ -68,17 +68,32 @@ def refine_match(
     refined_spin = spin_params
     if hypothesis in ("spin_fit", "inertial_fit") and spin_params is not None:
         ra0, dec0, per0, ph0, ax_, ay, az = spin_params
-        axis = (ax_, ay, az)
 
-        def objective(x):
-            att = PrincipalAxisSpin(x[0], x[1], x[2], x[3], body_axis=axis)
-            return huber_mag_cost(shape, att, arrays_tracking, prep, offset_sigma)
+        # coarse fits routinely land on a discrete symmetry twin (90 deg
+        # body-axis swap for plate-like bodies, 180 deg flip for tubes):
+        # inertially consistent for the dominant facet but wrong for the
+        # bus faces. Search the small symmetry group explicitly.
+        best = None
+        for axis in {(ax_, ay, az), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0),
+                     (0.0, 0.0, 1.0)}:
+            for dphase in (0.0, np.pi):
 
-        res = minimize(objective, x0=[ra0, dec0, per0, ph0],
-                       method="Nelder-Mead",
-                       options=dict(maxiter=800, xatol=1e-4, fatol=1e-8))
-        refined_spin = (float(res.x[0] % 360), float(res.x[1]),
-                        float(res.x[2]), float(res.x[3] % (2 * np.pi)),
+                def objective(x, axis=axis):
+                    att = PrincipalAxisSpin(x[0], x[1], x[2], x[3],
+                                            body_axis=axis)
+                    return huber_mag_cost(shape, att, arrays_tracking, prep,
+                                          offset_sigma)
+
+                res = minimize(objective,
+                               x0=[ra0, dec0, per0, ph0 + dphase],
+                               method="Nelder-Mead",
+                               options=dict(maxiter=600, xatol=1e-4,
+                                            fatol=1e-8))
+                if best is None or res.fun < best[0]:
+                    best = (res.fun, res.x, axis)
+        _, x_best, axis = best
+        refined_spin = (float(x_best[0] % 360), float(x_best[1]),
+                        float(x_best[2]), float(x_best[3] % (2 * np.pi)),
                         *axis)
         attitude = PrincipalAxisSpin(*refined_spin[:4], body_axis=axis)
     cost_refined = huber_mag_cost(shape, attitude, arrays_tracking, prep,
