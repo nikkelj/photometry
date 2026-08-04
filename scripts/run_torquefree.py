@@ -57,14 +57,15 @@ def main() -> None:
     # data-driven |omega| candidates: distinct light-curve peaks + doubles
     # (flat facets modulate at twice the rotation frequency)
     from photometry.inversion.periodogram import brightness_periodogram
-    periods, power = brightness_periodogram(obs, period_range_s=(20.0, 600.0))
+    periods, power = brightness_periodogram(obs, period_range_s=(20.0, 300.0))
     peaks = []
     for i in np.argsort(power)[::-1]:
         if all(abs(periods[i] - p) > 3 for p in peaks):
             peaks.append(float(periods[i]))
         if len(peaks) >= 3:
             break
-    seed_periods = sorted({round(p, 2) for p in peaks + [2 * p for p in peaks]})
+    seed_periods = sorted({round(p, 2) for p in peaks + [2 * p for p in peaks]
+                           if p < 320})
     print(f"Fitting torque-free dynamics (seed periods {seed_periods})...")
     t0 = time.time()
     fit = fit_torque_free(obs, s.shape(), seed_spin, seed_periods=seed_periods)

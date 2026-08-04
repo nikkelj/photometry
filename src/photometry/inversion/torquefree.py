@@ -139,11 +139,13 @@ def fit_torque_free(
         seed_periods = [seed_spin.period_s]
 
     # window ladder: coherence over N rotations makes the omega basin
-    # ~1/N of the rate — start where basins are wide (~2-3 rotations),
-    # extend and re-refine. Same principle as the period ladder.
+    # ~1/N of the rate — but the first window must also carry enough rows
+    # that aliases lose to the true rate, so it is sized for statistics
+    # (~900 s) as well as rotations, then extended and re-refined.
     p_min = min(seed_periods)
+    w0_s = max(3.0 * p_min, 900.0)
     windows = sorted({min(window_s, w) for w in
-                      (3.0 * p_min, 12.0 * p_min, window_s)})
+                      (w0_s, 4.0 * w0_s, window_s)})
     preps, t_rels = [], []
     for w_s, cap in zip(windows, (400, 600, max_obs)):
         in_win = (obs.t_s >= t_ref) & (obs.t_s <= t_ref + w_s)
@@ -179,17 +181,21 @@ def fit_torque_free(
         return objective
 
     # start bank: |omega| x body axis (tilted 15 deg) x initial attitude
+    # x inertia guess — a frozen wrong inertia decoheres the nutation
+    # within a few periods and would reject the correct rate starts
     axes = np.eye(3)
     tilt = rodrigues(np.array([0.0, 0.0, 1.0]), np.radians(15.0))
     tilt2 = rodrigues(np.array([1.0, 0.0, 0.0]), np.radians(15.0))
     r0_variants = [np.zeros(3), np.array([0.0, 0.0, np.pi / 2])]
+    inertia_variants = [(1.8, 2.4), (2.6, 3.2)]
     starts = []
     for p in seed_periods:
         wm = 2 * np.pi / p
         for i, a in enumerate(axes):
             w0 = wm * ((tilt if i != 2 else tilt2) @ a)
             for rv in r0_variants:
-                starts.append(np.array([np.log(1.8), np.log(2.4), *w0, *rv]))
+                for i2, i3 in inertia_variants:
+                    starts.append(np.array([np.log(i2), np.log(i3), *w0, *rv]))
 
     # stage 0 phase A on the shortest window, inertia frozen
     obj0 = make_objective(0)
