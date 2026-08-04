@@ -1,0 +1,15 @@
+{
+  "scenario": "hubble__science",
+  "refined_model": "hubble",
+  "truth_model": "hubble",
+  "seeded_wrong": false,
+  "hypothesis": "inertial_fit",
+  "alert": true,
+  "alert_correct": false,
+  "deviation_truth": false,
+  "rms_ratio": 2.1078292578525533,
+  "fit_quality": 4.7318510682748,
+  "peak_albedo_area": -0.6073650727200606,
+  "cluster_albedo_area": -3.979065638159763,
+  "reason": "unexplained structure and poor overall fit"
+}
