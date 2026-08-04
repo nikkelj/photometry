@@ -44,22 +44,33 @@ def _model_mags(shape, pole, period, phase, obs: ObservationSet,
 
 
 def _cost(shape, pole, period, phase, obs, meas_mag, w,
-          body_axis=(0.0, 0.0, 1.0), offset_sigma=None) -> float:
-    dm = meas_mag - _model_mags(shape, pole, period, phase, obs, body_axis)
+          body_axis=(0.0, 0.0, 1.0), offset_sigma=None, cens=None) -> float:
+    model_mag = _model_mags(shape, pole, period, phase, obs, body_axis)
+    dm = meas_mag - model_mag
+    ok = slice(None) if cens is None else ~cens
     if offset_sigma is None:
-        o = np.sum(w * dm) / np.sum(w)  # free photometric offset (albedo scale)
+        o = np.sum(w[ok] * dm[ok]) / np.sum(w[ok])  # free offset (albedo scale)
         penalty = 0.0
     else:
         # zero-mean Gaussian prior on the offset keeps absolute brightness
         # informative (range is known) while absorbing albedo uncertainty
-        o = np.sum(w * dm) / (np.sum(w) + 1.0 / offset_sigma**2)
+        o = np.sum(w[ok] * dm[ok]) / (np.sum(w[ok]) + 1.0 / offset_sigma**2)
         penalty = (o / offset_sigma) ** 2 / len(dm)
-    dm = dm - o
     # Huber-style soft clip so specular-glint mismatches don't dominate
-    r = np.sqrt(w) * dm
     a = 3.0
+    r = np.sqrt(w[ok]) * (dm[ok] - o)
     rho = np.where(np.abs(r) < a, r**2, 2 * a * np.abs(r) - a**2)
-    return float(np.mean(rho) + penalty)
+    total = float(np.sum(rho))
+    n = len(dm) if cens is None else int(np.sum(~cens))
+    if cens is not None and cens.any():
+        # censored rows: penalize only when the model predicts fainter than
+        # the saturation cap — the saturation timing pattern carries the
+        # spin when the bright phases themselves are censored
+        viol = np.clip((model_mag[cens] + o) - meas_mag[cens], 0.0, None)
+        rc = np.sqrt(w[cens]) * viol
+        total += float(np.sum(np.where(rc < a, rc**2, 2 * a * rc - a**2)))
+        n += int(cens.sum())
+    return total / max(n, 1) + penalty
 
 
 def grid_search_pole(
@@ -72,17 +83,23 @@ def grid_search_pole(
     seed: int = 0,
     body_axes: tuple = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
     offset_sigma: float | None = None,
+    include_censored: bool = False,
 ) -> PoleSolution:
     """Grid over pole x phase x candidate period x body spin axis, then refine.
 
     The body spin axis is which principal body axis lies along the pole —
     a flat spin and a propeller tumble of the same object photometrically
-    differ enormously, so it is part of the hypothesis space.
+    differ enormously, so it is part of the hypothesis space. With
+    include_censored, saturated rows enter as one-sided brighter-than-cap
+    terms — for heavily saturated targets the saturation timing pattern is
+    where the spin information lives.
     """
     rng = np.random.default_rng(seed)
-    obs = obs.uncensored()  # saturated rows carry no calibrated magnitude
+    if not include_censored:
+        obs = obs.uncensored()  # saturated rows carry no calibrated magnitude
     if len(obs) > max_obs:
         obs = obs.subset(np.sort(rng.choice(len(obs), max_obs, replace=False)))
+    cens = obs.censored.astype(bool) if include_censored else None
 
     meas_mag = -2.5 * np.log10(np.clip(obs.normalized_brightness(), 1e-6, None))
     w = 1.0 / np.maximum(obs.mag_sigma, 1e-3) ** 2
@@ -100,7 +117,7 @@ def grid_search_pole(
                 c_best = np.inf
                 for phase in phases:
                     c = _cost(shape, p, period, phase, obs, meas_mag, w, axis,
-                              offset_sigma)
+                              offset_sigma, cens)
                     if c < c_best:
                         c_best = c
                     if c < best[0]:
@@ -119,7 +136,8 @@ def grid_search_pole(
                 np.sin(np.radians(dec)),
             ]
         )
-        return _cost(shape, pole, per, ph, obs, meas_mag, w, axis0, offset_sigma)
+        return _cost(shape, pole, per, ph, obs, meas_mag, w, axis0,
+                     offset_sigma, cens)
 
     res = minimize(
         objective,
@@ -167,6 +185,7 @@ def ladder_spin_search(
     seed: int = 0,
     body_axes: tuple = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
     offset_sigma: float | None = None,
+    include_censored: bool = True,
 ) -> PoleSolution:
     """Coherent period-ladder spin search for when the periodogram fails.
 
@@ -176,9 +195,12 @@ def ladder_spin_search(
     P^2/(2*window) so no basin is skipped; (2) grid over pole x phase x
     body axis at each candidate; (3) re-polish (period, phase, pole) over
     progressively longer arcs, each stage's accuracy bracketing the next
-    stage's basin.
+    stage's basin. Censored rows are kept by default: the ladder mostly
+    serves saturation-dominated targets, whose spin signature lives in
+    the saturation timing pattern.
     """
-    obs = obs.uncensored()
+    if not include_censored:
+        obs = obs.uncensored()
     t0 = float(obs.t_s.min())
     arc = float(obs.t_s.max() - t0)
 
@@ -192,7 +214,8 @@ def ladder_spin_search(
     sol = grid_search_pole(win, shape, candidate_periods=periods,
                            n_poles=n_poles, n_phases=n_phases, max_obs=max_obs,
                            seed=seed, body_axes=body_axes,
-                           offset_sigma=offset_sigma)
+                           offset_sigma=offset_sigma,
+                           include_censored=include_censored)
 
     # extend coherence: refine on growing arcs
     span = window_s
@@ -204,6 +227,7 @@ def ladder_spin_search(
             sub = sub.subset(np.sort(rng.choice(len(sub), max_obs, replace=False)))
         meas_mag = -2.5 * np.log10(np.clip(sub.normalized_brightness(), 1e-6, None))
         w = 1.0 / np.maximum(sub.mag_sigma, 1e-3) ** 2
+        cens = sub.censored.astype(bool) if include_censored else None
         axis = sol.body_axis
 
         def objective(x):
@@ -212,7 +236,7 @@ def ladder_spin_search(
                              np.cos(np.radians(dec)) * np.sin(np.radians(ra)),
                              np.sin(np.radians(dec))])
             return _cost(shape, pole, per, ph, sub, meas_mag, w, axis,
-                         offset_sigma)
+                         offset_sigma, cens)
 
         res = minimize(objective,
                        x0=[sol.pole_ra_deg, sol.pole_dec_deg, sol.period_s,
