@@ -1,0 +1,15 @@
+{
+  "scenario": "katalyst_link__tumble",
+  "refined_model": "katalyst_link",
+  "truth_model": "katalyst_link",
+  "seeded_wrong": false,
+  "hypothesis": "spin_fit",
+  "alert": false,
+  "alert_correct": true,
+  "deviation_truth": false,
+  "rms_ratio": 1.0247268895445079,
+  "fit_quality": 1.0073463787202994,
+  "peak_albedo_area": -0.017871509450324535,
+  "cluster_albedo_area": -0.03239257177480791,
+  "reason": "consistent with catalog model"
+}

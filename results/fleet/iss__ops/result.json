@@ -1,0 +1,26 @@
+{
+  "scenario": "iss__ops",
+  "sat": "iss",
+  "mode_true": "ops",
+  "real_altitude_km": 420,
+  "study_altitude_km": 620.0,
+  "n_detections": 28380,
+  "n_observers": 2472,
+  "sim_seconds": 29.2,
+  "classify_seconds": 26.9,
+  "period_ls_s": 1456.6295318436473,
+  "hypothesis_costs": {
+    "lvlh_ops": 0.10787633733715839,
+    "lvlh_low_drag": 8.069581605595612,
+    "inertial_fit": 9.443083110325988,
+    "sun_point": 15.802593707081385,
+    "spin_fit": 37.822410495617895
+  },
+  "mode_best": "lvlh_ops",
+  "mode_expected": "lvlh_ops",
+  "mode_correct": true,
+  "egi_total_albedo_area_m2": 2990.466757964893,
+  "egi_total_specular_area_m2": 3226.249063490836,
+  "egi_residual_rms": 1.0596076532767176,
+  "true_diffuse_albedo_area_m2": 3156.6
+}

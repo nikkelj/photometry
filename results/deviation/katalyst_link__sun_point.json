@@ -1,0 +1,15 @@
+{
+  "scenario": "katalyst_link__sun_point",
+  "refined_model": "katalyst_link",
+  "truth_model": "katalyst_link",
+  "seeded_wrong": false,
+  "hypothesis": "sun_point",
+  "alert": false,
+  "alert_correct": true,
+  "deviation_truth": false,
+  "rms_ratio": 1.0082021647828467,
+  "fit_quality": 0.9914956964239845,
+  "peak_albedo_area": -0.00972486885623694,
+  "cluster_albedo_area": -0.03382225001796279,
+  "reason": "consistent with catalog model"
+}

@@ -1,0 +1,15 @@
+{
+  "scenario": "starlink_v2mini_dtc__ops",
+  "refined_model": "starlink_v2mini",
+  "truth_model": "starlink_v2mini_dtc",
+  "seeded_wrong": true,
+  "hypothesis": "lvlh_ops",
+  "alert": true,
+  "alert_correct": true,
+  "deviation_truth": true,
+  "rms_ratio": 1.53781300131296,
+  "fit_quality": 2.5926363247881192,
+  "peak_albedo_area": 0.08407938284473523,
+  "cluster_albedo_area": 0.5328257128198017,
+  "reason": "localized residual structure vs catalog model"
+}

@@ -1,0 +1,36 @@
+{
+  "scenario": "hubble__safe_sun",
+  "sat": "hubble",
+  "mode_true": "safe_sun",
+  "real_altitude_km": 530,
+  "study_altitude_km": 620.0,
+  "n_detections": 26007,
+  "n_observers": 2442,
+  "sim_seconds": 16.5,
+  "classify_seconds": 93.4,
+  "period_ls_s": 2918.946824987093,
+  "hypothesis_costs": {
+    "inertial_fit": 0.980272823252692,
+    "sun_point": 0.9826739235795963,
+    "spin_fit": 21.096047965831552,
+    "lvlh_ops": 97.95182105794231,
+    "lvlh_low_drag": 108.6352162873687
+  },
+  "mode_best": "inertial_fit",
+  "mode_expected": "sun_point",
+  "mode_correct": true,
+  "egi_total_albedo_area_m2": 23.901875468930772,
+  "egi_total_specular_area_m2": 94.77024009005524,
+  "egi_residual_rms": 1.2898675193564175,
+  "true_diffuse_albedo_area_m2": 81.63843329118873,
+  "spin_period_est_s": 1269448657823.9126,
+  "spin_pole_est_radec_deg": [
+    310.03149322498365,
+    -14.9952124482074
+  ],
+  "spin_body_axis_est": [
+    0.0,
+    0.0,
+    1.0
+  ]
+}

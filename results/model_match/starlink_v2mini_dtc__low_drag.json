@@ -1,0 +1,42 @@
+{
+  "scenario": "starlink_v2mini_dtc__low_drag",
+  "true_model": "starlink_v2mini_dtc",
+  "true_mode": "low_drag",
+  "identified_model": "starlink_v2mini_dtc",
+  "identified_hypothesis": "lvlh_low_drag",
+  "identified_arrays_tracking": false,
+  "correct_model": true,
+  "match_seconds": 296.0,
+  "best_cost_per_model": {
+    "starlink_v2mini_dtc": 1.0607916530620167,
+    "starlink_v2mini": 1.9401517403828663,
+    "starlink_v15": 4.232246715139692,
+    "bluewalker3": 27.55182074968231,
+    "iss": 42.24467294626911,
+    "hubble": 48.95491374956443,
+    "katalyst_link": 58.30504113812346,
+    "box_wing": 62.9976859253366
+  },
+  "top5": [
+    {
+      "label": "starlink_v2mini_dtc | lvlh_low_drag | arrays frozen",
+      "cost": 1.0607916530620167
+    },
+    {
+      "label": "starlink_v2mini | lvlh_low_drag | arrays frozen",
+      "cost": 1.9401517403828663
+    },
+    {
+      "label": "starlink_v15 | spin_fit | arrays frozen",
+      "cost": 4.232246715139692
+    },
+    {
+      "label": "starlink_v2mini_dtc | spin_fit | arrays frozen",
+      "cost": 7.783800935228917
+    },
+    {
+      "label": "starlink_v2mini | inertial_fit | arrays frozen",
+      "cost": 9.244459736936365
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "n_planes": 100,
+  "sats_per_plane": 100,
+  "shell_altitude_km": 550.0,
+  "shell_inclination_deg": 53.0,
+  "target_altitude_km": 620.0,
+  "target_inclination_deg": 72.0,
+  "target_raan_deg": 40.0,
+  "target_arg_lat_deg": 10.0,
+  "pole_ra_deg": 200.0,
+  "pole_dec_deg": 35.0,
+  "spin_period_s": 127.4,
+  "spin_phase_rad": 0.7,
+  "sun_ra_deg": 130.0,
+  "sun_dec_deg": 15.0,
+  "duration_s": 11640.0,
+  "dt_s": 4.0,
+  "seed": 12345
+}

@@ -1,0 +1,51 @@
+{
+  "scenario": "hubble__science",
+  "true_model": "hubble",
+  "true_mode": "science",
+  "identified_model": "hubble",
+  "identified_hypothesis": "inertial_fit",
+  "identified_arrays_tracking": true,
+  "correct_model": true,
+  "match_seconds": 606.7,
+  "best_cost_per_model": {
+    "hubble": 5.771192337657902,
+    "box_wing": 39.864211602361884,
+    "starlink_v15": 48.8036582847469,
+    "katalyst_link": 49.34383798791179,
+    "bluewalker3": 49.707293938109565,
+    "iss": 50.77688256432138,
+    "starlink_v2mini_dtc": 51.06405514406543,
+    "starlink_v2mini": 51.11407423487612
+  },
+  "top5": [
+    {
+      "label": "hubble | inertial_fit | arrays tracking",
+      "cost": 5.771192337657902
+    },
+    {
+      "label": "hubble | inertial_fit | arrays frozen",
+      "cost": 7.859746697057977
+    },
+    {
+      "label": "hubble | spin_fit | arrays tracking",
+      "cost": 16.19179099052575
+    },
+    {
+      "label": "hubble | spin_fit | arrays frozen",
+      "cost": 17.03842070102264
+    },
+    {
+      "label": "box_wing | inertial_fit | arrays frozen",
+      "cost": 39.864211602361884
+    }
+  ],
+  "identified_spin": [
+    357.1394997760631,
+    19.1374230468545,
+    1060161400401.9962,
+    4.295296342199228,
+    0.0,
+    0.0,
+    1.0
+  ]
+}

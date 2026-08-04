@@ -1,0 +1,15 @@
+{
+  "scenario": "bluewalker3__tumble",
+  "refined_model": "bluewalker3",
+  "truth_model": "bluewalker3",
+  "seeded_wrong": false,
+  "hypothesis": "spin_fit",
+  "alert": false,
+  "alert_correct": true,
+  "deviation_truth": false,
+  "rms_ratio": 1.0271150564450011,
+  "fit_quality": 0.9828956625605585,
+  "peak_albedo_area": -0.036560537130106,
+  "cluster_albedo_area": -0.09954500386832296,
+  "reason": "consistent with catalog model"
+}

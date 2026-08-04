@@ -1,0 +1,15 @@
+{
+  "scenario": "starlink_v2mini__low_drag",
+  "refined_model": "starlink_v2mini",
+  "truth_model": "starlink_v2mini",
+  "seeded_wrong": false,
+  "hypothesis": "lvlh_low_drag",
+  "alert": false,
+  "alert_correct": true,
+  "deviation_truth": false,
+  "rms_ratio": 1.0131846786284828,
+  "fit_quality": 1.0547206412063594,
+  "peak_albedo_area": -0.017532296634200487,
+  "cluster_albedo_area": -0.0768582528232949,
+  "reason": "consistent with catalog model"
+}

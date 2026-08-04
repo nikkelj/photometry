@@ -1,0 +1,51 @@
+{
+  "scenario": "starlink_v2mini_dtc__tumble",
+  "true_model": "starlink_v2mini_dtc",
+  "true_mode": "tumble",
+  "identified_model": "starlink_v2mini_dtc",
+  "identified_hypothesis": "spin_fit",
+  "identified_arrays_tracking": false,
+  "correct_model": true,
+  "match_seconds": 172.4,
+  "best_cost_per_model": {
+    "starlink_v2mini_dtc": 6.951419398741951,
+    "starlink_v2mini": 7.033387507078965,
+    "starlink_v15": 24.134978953725742,
+    "bluewalker3": 67.82718362437633,
+    "iss": 81.53138141800659,
+    "hubble": 93.44960913196438,
+    "katalyst_link": 93.74477141157476,
+    "box_wing": 112.09997730218431
+  },
+  "top5": [
+    {
+      "label": "starlink_v2mini_dtc | spin_fit | arrays frozen",
+      "cost": 6.951419398741951
+    },
+    {
+      "label": "starlink_v2mini | spin_fit | arrays frozen",
+      "cost": 7.033387507078965
+    },
+    {
+      "label": "starlink_v15 | spin_fit | arrays frozen",
+      "cost": 24.134978953725742
+    },
+    {
+      "label": "bluewalker3 | spin_fit | arrays frozen",
+      "cost": 67.82718362437633
+    },
+    {
+      "label": "iss | spin_fit | arrays frozen",
+      "cost": 81.53138141800659
+    }
+  ],
+  "identified_spin": [
+    200.01460073628255,
+    34.90011051385467,
+    127.39993418714752,
+    3.6642302573026577,
+    0.0,
+    1.0,
+    0.0
+  ]
+}

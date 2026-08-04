@@ -1,0 +1,15 @@
+{
+  "scenario": "iss__tumble",
+  "refined_model": "hubble",
+  "truth_model": "iss",
+  "seeded_wrong": false,
+  "hypothesis": "inertial_fit",
+  "alert": true,
+  "alert_correct": true,
+  "deviation_truth": true,
+  "rms_ratio": 3.062538754021677,
+  "fit_quality": 10.09793740735374,
+  "peak_albedo_area": 18.56895357427599,
+  "cluster_albedo_area": 118.42622046418909,
+  "reason": "unexplained structure and poor overall fit"
+}

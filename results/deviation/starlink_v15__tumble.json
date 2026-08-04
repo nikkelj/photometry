@@ -1,0 +1,15 @@
+{
+  "scenario": "starlink_v15__tumble",
+  "refined_model": "starlink_v15",
+  "truth_model": "starlink_v15",
+  "seeded_wrong": false,
+  "hypothesis": "spin_fit",
+  "alert": false,
+  "alert_correct": true,
+  "deviation_truth": false,
+  "rms_ratio": 1.0201903756677606,
+  "fit_quality": 1.0090740082528844,
+  "peak_albedo_area": -0.010727968113460063,
+  "cluster_albedo_area": -0.068672526136643,
+  "reason": "consistent with catalog model"
+}

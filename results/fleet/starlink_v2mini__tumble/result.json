@@ -1,0 +1,36 @@
+{
+  "scenario": "starlink_v2mini__tumble",
+  "sat": "starlink_v2mini",
+  "mode_true": "tumble",
+  "real_altitude_km": 530,
+  "study_altitude_km": 620.0,
+  "n_detections": 25729,
+  "n_observers": 2489,
+  "sim_seconds": 18.0,
+  "classify_seconds": 38.6,
+  "period_ls_s": 63.704312855203646,
+  "hypothesis_costs": {
+    "spin_fit": 24.553959629306927,
+    "inertial_fit": 127.08175195673033,
+    "lvlh_ops": 166.32252547345547,
+    "lvlh_low_drag": 167.82517021457826,
+    "sun_point": 604.6153060246702
+  },
+  "mode_best": "spin_fit",
+  "mode_expected": "spin_fit",
+  "mode_correct": true,
+  "egi_total_albedo_area_m2": 11.731516720969505,
+  "egi_total_specular_area_m2": 40.73236691637532,
+  "egi_residual_rms": 1.7408154196627503,
+  "true_diffuse_albedo_area_m2": 49.38459999999999,
+  "spin_period_est_s": 127.407677070181,
+  "spin_pole_est_radec_deg": [
+    200.0092274176073,
+    33.5343704017655
+  ],
+  "spin_body_axis_est": [
+    1.0,
+    0.0,
+    0.0
+  ]
+}

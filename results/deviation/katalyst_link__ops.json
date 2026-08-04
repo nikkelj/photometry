@@ -1,0 +1,15 @@
+{
+  "scenario": "katalyst_link__ops",
+  "refined_model": "katalyst_link",
+  "truth_model": "katalyst_link",
+  "seeded_wrong": false,
+  "hypothesis": "lvlh_ops",
+  "alert": false,
+  "alert_correct": true,
+  "deviation_truth": false,
+  "rms_ratio": 1.013004161128772,
+  "fit_quality": 1.0426925121937238,
+  "peak_albedo_area": 0.011428514595471022,
+  "cluster_albedo_area": 0.03548841862313723,
+  "reason": "consistent with catalog model"
+}

@@ -1,0 +1,37 @@
+{
+  "scenario": "bluewalker3__ops",
+  "sat": "bluewalker3",
+  "mode_true": "ops",
+  "real_altitude_km": 500,
+  "study_altitude_km": 620.0,
+  "n_detections": 28130,
+  "n_observers": 2467,
+  "sim_seconds": 19.5,
+  "classify_seconds": 56.6,
+  "period_ls_s": 5812.855980471929,
+  "hypothesis_costs": {
+    "spin_fit": 1.0249293542193572,
+    "lvlh_ops": 1.0257768461804717,
+    "inertial_fit": 40.87998599241229,
+    "lvlh_low_drag": 71.83971325440271,
+    "sun_point": 689.9987463702138
+  },
+  "mode_best": "spin_fit",
+  "mode_expected": "lvlh_ops",
+  "mode_correct": true,
+  "egi_total_albedo_area_m2": 17.34357765904581,
+  "egi_total_specular_area_m2": 23.497050719336727,
+  "egi_residual_rms": 1.1655368028956996,
+  "true_diffuse_albedo_area_m2": 20.69,
+  "spin_period_est_s": 5826.071455502516,
+  "spin_pole_est_radec_deg": [
+    309.98055784252364,
+    19.985494968448265
+  ],
+  "spin_body_axis_est": [
+    1.0,
+    0.0,
+    0.0
+  ],
+  "mode_note": "spin_fit solution equals the LVLH-hold rotation: period = orbital period (5826.1 vs 5826.2 s), pole = orbit normal (0.02 deg)"
+}

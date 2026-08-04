@@ -1,0 +1,15 @@
+{
+  "scenario": "iss__ops",
+  "refined_model": "iss",
+  "truth_model": "iss",
+  "seeded_wrong": false,
+  "hypothesis": "lvlh_ops",
+  "alert": false,
+  "alert_correct": true,
+  "deviation_truth": false,
+  "rms_ratio": 1.0154233384766969,
+  "fit_quality": 0.12312303393762022,
+  "peak_albedo_area": -0.5310761278979194,
+  "cluster_albedo_area": -2.9410417065286105,
+  "reason": "consistent with catalog model"
+}

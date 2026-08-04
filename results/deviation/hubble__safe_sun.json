@@ -1,0 +1,15 @@
+{
+  "scenario": "hubble__safe_sun",
+  "refined_model": "hubble",
+  "truth_model": "hubble",
+  "seeded_wrong": false,
+  "hypothesis": "sun_point",
+  "alert": false,
+  "alert_correct": true,
+  "deviation_truth": false,
+  "rms_ratio": 1.0134435079161352,
+  "fit_quality": 0.9846799708024401,
+  "peak_albedo_area": -0.034613164749886606,
+  "cluster_albedo_area": -0.13917488128988675,
+  "reason": "consistent with catalog model"
+}
