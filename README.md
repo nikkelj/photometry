@@ -6,7 +6,9 @@ constellation's star trackers. See
 [docs/constellation-photometric-attitude-shape-estimation.md](docs/constellation-photometric-attitude-shape-estimation.md)
 for the founding design document; this README is the results write-up. A
 dark-themed briefing deck of the same material is at
-[docs/photometry_briefing.pptx](docs/photometry_briefing.pptx).
+[docs/photometry_briefing.pptx](docs/photometry_briefing.pptx), and
+[docs/real-data-integration.md](docs/real-data-integration.md) is the
+guide for wiring the experiment to real data sources.
 
 ## The idea in one paragraph
 
@@ -252,4 +254,7 @@ right panel, error halved vs uniform spin:*
    the EGI bounds only the convex hull.
 5. **Real tracklets**: reduce to `ObservationSet`
    (`src/photometry/measurements.py`) and the identical stack runs — that
-   schema is the sim/real seam by construction.
+   schema is the sim/real seam by construction. The full wiring guide —
+   sources by role, the reduction pipeline, the calibration loop, code
+   adapters, and a worked loader skeleton — is
+   [docs/real-data-integration.md](docs/real-data-integration.md).
