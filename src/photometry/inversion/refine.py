@@ -76,21 +76,24 @@ def refine_match(
         best = None
         for axis in {(ax_, ay, az), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0),
                      (0.0, 0.0, 1.0)}:
-            for dphase in (0.0, np.pi):
+            # pole antipode generates the tube-flip twin (180 deg about an
+            # axis perpendicular to the pole) that phase shifts cannot reach
+            for ra_s, dec_s in ((ra0, dec0), ((ra0 + 180) % 360, -dec0)):
+                for dphase in (0.0, np.pi):
 
-                def objective(x, axis=axis):
-                    att = PrincipalAxisSpin(x[0], x[1], x[2], x[3],
-                                            body_axis=axis)
-                    return huber_mag_cost(shape, att, arrays_tracking, prep,
-                                          offset_sigma)
+                    def objective(x, axis=axis):
+                        att = PrincipalAxisSpin(x[0], x[1], x[2], x[3],
+                                                body_axis=axis)
+                        return huber_mag_cost(shape, att, arrays_tracking,
+                                              prep, offset_sigma)
 
-                res = minimize(objective,
-                               x0=[ra0, dec0, per0, ph0 + dphase],
-                               method="Nelder-Mead",
-                               options=dict(maxiter=600, xatol=1e-4,
-                                            fatol=1e-8))
-                if best is None or res.fun < best[0]:
-                    best = (res.fun, res.x, axis)
+                    res = minimize(objective,
+                                   x0=[ra_s, dec_s, per0, ph0 + dphase],
+                                   method="Nelder-Mead",
+                                   options=dict(maxiter=600, xatol=1e-4,
+                                                fatol=1e-8))
+                    if best is None or res.fun < best[0]:
+                        best = (res.fun, res.x, axis)
         _, x_best, axis = best
         refined_spin = (float(x_best[0] % 360), float(x_best[1]),
                         float(x_best[2]), float(x_best[3] % (2 * np.pi)),

@@ -4,12 +4,12 @@
   "truth_model": "starlink_v15",
   "seeded_wrong": false,
   "hypothesis": "spin_fit",
-  "alert": true,
-  "alert_correct": false,
+  "alert": false,
+  "alert_correct": true,
   "deviation_truth": false,
-  "rms_ratio": 3.0483479732881174,
-  "fit_quality": 11.608592010549515,
-  "peak_albedo_area": -0.03929115366914426,
-  "cluster_albedo_area": -0.13618623799605323,
-  "reason": "unexplained structure and poor overall fit"
+  "rms_ratio": 1.0201903756677606,
+  "fit_quality": 1.0090740082528844,
+  "peak_albedo_area": -0.010727968113460063,
+  "cluster_albedo_area": -0.068672526136643,
+  "reason": "consistent with catalog model"
 }

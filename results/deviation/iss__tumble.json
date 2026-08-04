@@ -7,9 +7,9 @@
   "alert": true,
   "alert_correct": true,
   "deviation_truth": true,
-  "rms_ratio": 3.015766719663805,
-  "fit_quality": 10.286569786126691,
-  "peak_albedo_area": 19.941433023465375,
-  "cluster_albedo_area": 111.80793579807072,
+  "rms_ratio": 3.062538754021677,
+  "fit_quality": 10.09793740735374,
+  "peak_albedo_area": 18.56895357427599,
+  "cluster_albedo_area": 118.42622046418909,
   "reason": "unexplained structure and poor overall fit"
 }

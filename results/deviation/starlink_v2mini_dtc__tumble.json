@@ -4,12 +4,12 @@
   "truth_model": "starlink_v2mini_dtc",
   "seeded_wrong": false,
   "hypothesis": "spin_fit",
-  "alert": true,
-  "alert_correct": false,
+  "alert": false,
+  "alert_correct": true,
   "deviation_truth": false,
-  "rms_ratio": 2.6181280001574865,
-  "fit_quality": 7.038677202033236,
-  "peak_albedo_area": 0.03325709518023614,
-  "cluster_albedo_area": 0.12547811507838724,
-  "reason": "unexplained structure and poor overall fit"
+  "rms_ratio": 1.0209840636777703,
+  "fit_quality": 1.0065177524741724,
+  "peak_albedo_area": -0.015456402075475013,
+  "cluster_albedo_area": -0.06678617267504305,
+  "reason": "consistent with catalog model"
 }

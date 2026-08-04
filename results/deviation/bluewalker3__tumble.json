@@ -7,9 +7,9 @@
   "alert": false,
   "alert_correct": true,
   "deviation_truth": false,
-  "rms_ratio": 1.0265261967838453,
-  "fit_quality": 0.9828956628411035,
-  "peak_albedo_area": 0.030447296759305298,
-  "cluster_albedo_area": 0.060110673526075666,
+  "rms_ratio": 1.0271150564450011,
+  "fit_quality": 0.9828956625605585,
+  "peak_albedo_area": -0.036560537130106,
+  "cluster_albedo_area": -0.09954500386832296,
   "reason": "consistent with catalog model"
 }
