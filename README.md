@@ -104,9 +104,9 @@ caught up. Reading this table top-to-bottom is the development history.
 
 | Stage | Algorithm | Problem it solved | Evidence |
 |---|---|---|---|
-| A1 | Lomb–Scargle periodogram on the aggregated brightness stream (arc-length-sized frequency grid) | Spin period from multi-observer data | Baseline period to **1 ms** |
-| A2 | Spin-pole grid search (Fibonacci sphere × phase × body spin axis) + simplex refinement | Full spin state; flat-spin vs propeller distinction | Baseline pole to **0.04°**; LINK tumble pole 0.07°, correct body axis |
-| A3 | EGI by non-negative least squares (Lambert kernel), then joint Lambert+Phong basis with dead-column pruning and scale-aware ridge | Shape from brightness; specular leakage bias +25% → −9% | 98% of recovered area within 15° of true normals |
+| A1 | Lomb–Scargle periodogram on the aggregated brightness stream (arc-length-sized frequency grid) | Spin period from multi-observer data | Baseline period sub-ms |
+| A2 | Spin-pole grid search (Fibonacci sphere × phase × body spin axis) + simplex refinement | Full spin state; flat-spin vs propeller distinction | Baseline pole to **0.1°**; LINK tumble pole 0.07°, correct body axis |
+| A3 | EGI by non-negative least squares (Lambert kernel), then joint Lambert+Phong basis with dead-column pruning and scale-aware ridge | Shape from brightness; specular leakage bias +25% → −9% | 99% of recovered area within 15° of true normals |
 | A4 | Tier-2 mode classifier: named operational laws + fitted spin/inertial families | "Is it controlled, safe-moded, or tumbling?" | 20/21 scenarios correct (the miss is Hubble's axisymmetric tumble — physically unobservable rotation) |
 | A5 | Minkowski reconstruction, fixed-point then **variational** (support-functional L-BFGS-B, analytic gradient dV/dh = face areas) | EGI → actual convex solid; slab proportions fixed | v1.5 slab reconstructs 7.7×3.7×1.0 m vs 8.1×2.7 truth, areas matched exactly |
 | A6 | Library identification: model × attitude family × array config, 0.5-mag offset prior so absolute brightness carries size | "Which catalog object is this, in what state?" | **20/21 correct** incl. DTC vs plain v2 mini (cost 1.09 vs 2.64) |
@@ -122,7 +122,7 @@ caught up. Reading this table top-to-bottom is the development history.
 ### Baseline: tumbling box-wing, 3.2 h arc
 
 5,703 detections from 588 distinct observers, phase angles 14–142°.
-Spin period to 1 ms, pole to 0.04°, EGI with 98% of recovered
+Spin period exact to sub-ms, pole to 0.1°, EGI with 99% of recovered
 albedo-area within 15° of true facet normals (the anti-sunward facet is
 unilluminated all arc and correctly unobservable).
 
