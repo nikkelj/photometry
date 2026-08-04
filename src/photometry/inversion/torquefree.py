@@ -133,17 +133,26 @@ def fit_torque_free(
     rng = np.random.default_rng(seed)
     if t_ref is None:
         t_ref = float(obs.t_s.min())
-    in_win = (obs.t_s >= t_ref) & (obs.t_s <= t_ref + window_s)
-    win = obs.subset(np.nonzero(in_win)[0])
-    if len(win) > max_obs:
-        win = win.subset(np.sort(rng.choice(len(win), max_obs, replace=False)))
-    prep = prepare_meas(win)
-    t_rel = win.t_s - t_ref
 
     r_seed = seed_spin.body_to_eci_matrix(t_ref)
-    cost_seed = huber_mag_cost(shape, seed_spin, False, prep, offset_sigma)
     if seed_periods is None:
         seed_periods = [seed_spin.period_s]
+
+    # window ladder: coherence over N rotations makes the omega basin
+    # ~1/N of the rate — start where basins are wide (~2-3 rotations),
+    # extend and re-refine. Same principle as the period ladder.
+    p_min = min(seed_periods)
+    windows = sorted({min(window_s, w) for w in
+                      (3.0 * p_min, 12.0 * p_min, window_s)})
+    preps, t_rels = [], []
+    for w_s, cap in zip(windows, (400, 600, max_obs)):
+        in_win = (obs.t_s >= t_ref) & (obs.t_s <= t_ref + w_s)
+        win = obs.subset(np.nonzero(in_win)[0])
+        if len(win) > cap:
+            win = win.subset(np.sort(rng.choice(len(win), cap, replace=False)))
+        preps.append(prepare_meas(win))
+        t_rels.append(win.t_s - t_ref)
+    cost_seed = huber_mag_cost(shape, seed_spin, False, preps[-1], offset_sigma)
 
     evals = [0]
 
@@ -155,15 +164,19 @@ def fit_torque_free(
         inertia = np.array([1.0, np.exp(li2), np.exp(li3)])
         return inertia, np.array([wx, wy, wz]), dr @ r_seed
 
-    def objective(x):
-        evals[0] += 1
-        inertia, w0, r0 = unpack(x)
-        try:
-            r_rows = solve_attitude_at(inertia, w0, r0, t_rel)
-        except Exception:
-            return 1e9
-        return huber_mag_cost(shape, _RowAttitude(r_rows), False, prep,
-                              offset_sigma)
+    def make_objective(stage: int):
+        prep, t_rel = preps[stage], t_rels[stage]
+
+        def objective(x):
+            evals[0] += 1
+            inertia, w0, r0 = unpack(x)
+            try:
+                r_rows = solve_attitude_at(inertia, w0, r0, t_rel)
+            except Exception:
+                return 1e9
+            return huber_mag_cost(shape, _RowAttitude(r_rows), False, prep,
+                                  offset_sigma)
+        return objective
 
     # start bank: |omega| x body axis (tilted 15 deg) x initial attitude
     axes = np.eye(3)
@@ -178,27 +191,41 @@ def fit_torque_free(
             for rv in r0_variants:
                 starts.append(np.array([np.log(1.8), np.log(2.4), *w0, *rv]))
 
-    # phase A: inertia frozen
+    # stage 0 phase A on the shortest window, inertia frozen
+    obj0 = make_objective(0)
     scored = []
     for x0 in starts:
         frozen = x0[:2].copy()
 
         def obj_a(x6):
-            return objective(np.concatenate([frozen, x6]))
+            return obj0(np.concatenate([frozen, x6]))
 
         res = minimize(obj_a, x0[2:], method="Nelder-Mead",
                        options=dict(maxiter=400, xatol=1e-5, fatol=1e-7))
         scored.append((res.fun, np.concatenate([frozen, res.x])))
     scored.sort(key=lambda s: s[0])
 
-    # phase B: full 8-parameter refinement of the best starts
-    best = None
-    for _, x0 in scored[:n_finalists]:
-        res = minimize(objective, x0, method="Nelder-Mead",
-                       options=dict(maxiter=1200, xatol=1e-6, fatol=1e-8))
-        if best is None or res.fun < best[0]:
-            best = (res.fun, res.x)
+    # stage 0 phase B: full 8 params, short window
+    stage_pool = []
+    for _, x0 in scored[: 2 * n_finalists]:
+        res = minimize(obj0, x0, method="Nelder-Mead",
+                       options=dict(maxiter=600, xatol=1e-6, fatol=1e-8))
+        stage_pool.append((res.fun, res.x))
+    stage_pool.sort(key=lambda s: s[0])
 
+    # extend through the window ladder
+    for stage in range(1, len(windows)):
+        obj_s = make_objective(stage)
+        n_keep = max(n_finalists - stage, 1)
+        nxt = []
+        for _, x0 in stage_pool[:n_keep + 1]:
+            res = minimize(obj_s, x0, method="Nelder-Mead",
+                           options=dict(maxiter=800, xatol=1e-6, fatol=1e-8))
+            nxt.append((res.fun, res.x))
+        nxt.sort(key=lambda s: s[0])
+        stage_pool = nxt
+
+    best = stage_pool[0]
     inertia, w0, r0 = unpack(best[1])
     return TorqueFreeFit(
         inertia=tuple(float(v) for v in inertia),
