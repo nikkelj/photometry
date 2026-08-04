@@ -124,15 +124,17 @@ def match_library(
                                        max_obs=mo_, seed=seed, body_axes=axes,
                                        offset_sigma=offset_sigma)
             # the grid search fits calibrated rows only; re-score with the
-            # shared censored cost so families rank on the same footing
+            # shared censored cost so families rank on the same footing —
+            # and under both array configs: an inertially pointed telescope
+            # still sun-tracks its arrays
             att = PrincipalAxisSpin(sol.pole_ra_deg, sol.pole_dec_deg,
                                     sol.period_s, sol.phase_rad,
                                     body_axis=sol.body_axis)
-            c = huber_mag_cost(shape, att, False, prep_, offset_sigma)
-            out.append(MatchResult(
-                name, fam, False, c,
-                spin_params=(sol.pole_ra_deg, sol.pole_dec_deg, sol.period_s,
-                             sol.phase_rad, *sol.body_axis)))
+            spin_p = (sol.pole_ra_deg, sol.pole_dec_deg, sol.period_s,
+                      sol.phase_rad, *sol.body_axis)
+            for art in art_options:
+                c = huber_mag_cost(shape, att, art, prep_, offset_sigma)
+                out.append(MatchResult(name, fam, art, c, spin_params=spin_p))
         return out
 
     results: list[MatchResult] = []
