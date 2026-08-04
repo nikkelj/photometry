@@ -145,6 +145,13 @@ def grid_search_pole(
         method="Nelder-Mead",
         options=dict(maxiter=600, xatol=1e-3, fatol=1e-6),
     )
+    # Nelder-Mead stalls on narrow period basins; fresh-simplex restarts
+    # from the incumbent recover the last decimal places cheaply
+    for _ in range(2):
+        res2 = minimize(objective, res.x, method="Nelder-Mead",
+                        options=dict(maxiter=600, xatol=1e-5, fatol=1e-9))
+        if res2.fun < res.fun:
+            res = res2
     ra, dec, per, ph = res.x
     pole = unit(
         np.array(

@@ -111,8 +111,12 @@ def chart(rows: list[dict], charts_dir: Path) -> None:
                         f"arrays {'tracking' if r['identified_arrays_tracking'] else 'frozen'}"
                         for r in rows], fontsize=8)
     n_ok = sum(r["correct_model"] for r in rows)
-    ax.set_title(f"Library model identification — {n_ok}/{len(rows)} correct "
-                 "(○ identified; ✕ truth when missed)", pad=12)
+    ax.set_title(
+        f"Library model identification — {n_ok}/{len(rows)} correct "
+        "(○ identified; ✕ truth when missed)\n"
+        "each cell: best cost over the full spacecraft-agnostic attitude "
+        "bank, fitted for that candidate model (no null cells)",
+        pad=12, fontsize=11)
     cb = fig.colorbar(im, shrink=0.8, pad=0.02)
     cb.set_label("log10 best cost per model / row best", color=INK_2)
     plt.setp(cb.ax.get_yticklabels(), color=MUTED)
