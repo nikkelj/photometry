@@ -4,46 +4,46 @@
   "true_mode": "science",
   "identified_model": "hubble",
   "identified_hypothesis": "inertial_fit",
-  "identified_arrays_tracking": false,
+  "identified_arrays_tracking": true,
   "correct_model": true,
-  "match_seconds": 134.4,
+  "match_seconds": 606.7,
   "best_cost_per_model": {
-    "hubble": 4.85383829220951,
-    "box_wing": 42.14957571985908,
-    "starlink_v15": 48.72128095973881,
-    "katalyst_link": 49.34383798791177,
+    "hubble": 5.771192337657902,
+    "box_wing": 39.864211602361884,
+    "starlink_v15": 48.8036582847469,
+    "katalyst_link": 49.34383798791179,
     "bluewalker3": 49.707293938109565,
-    "iss": 50.77688256432141,
+    "iss": 50.77688256432138,
     "starlink_v2mini_dtc": 51.06405514406543,
     "starlink_v2mini": 51.11407423487612
   },
   "top5": [
     {
+      "label": "hubble | inertial_fit | arrays tracking",
+      "cost": 5.771192337657902
+    },
+    {
       "label": "hubble | inertial_fit | arrays frozen",
-      "cost": 4.85383829220951
+      "cost": 7.859746697057977
+    },
+    {
+      "label": "hubble | spin_fit | arrays tracking",
+      "cost": 16.19179099052575
     },
     {
       "label": "hubble | spin_fit | arrays frozen",
-      "cost": 17.781440046735
+      "cost": 17.03842070102264
     },
     {
       "label": "box_wing | inertial_fit | arrays frozen",
-      "cost": 42.14957571985908
-    },
-    {
-      "label": "box_wing | spin_fit | arrays frozen",
-      "cost": 45.44269804118282
-    },
-    {
-      "label": "starlink_v15 | inertial_fit | arrays frozen",
-      "cost": 48.72128095973881
+      "cost": 39.864211602361884
     }
   ],
   "identified_spin": [
-    12.025705633134256,
-    46.14625801632812,
-    1183713056480.603,
-    4.403022829507556,
+    357.1394997760631,
+    19.1374230468545,
+    1060161400401.9962,
+    4.295296342199228,
     0.0,
     0.0,
     1.0

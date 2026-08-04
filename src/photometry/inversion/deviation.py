@@ -37,7 +37,7 @@ class DeviationAssessment:
 def assess_deviation(
     r: RefinementResult,
     rms_ratio_threshold: float = 1.15,
-    fit_quality_threshold: float = 4.0,
+    fit_quality_threshold: float = 8.0,
     cluster_cone_deg: float = 25.0,
 ) -> DeviationAssessment:
     ratio = r.residual_rms_before / max(r.residual_rms_after, 1e-9)
