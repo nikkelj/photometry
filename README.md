@@ -121,7 +121,7 @@ caught up. Reading this table top-to-bottom is the development history.
 | A9 | Censoring-aware costs (one-sided Tobit terms), stratified sampling, coherent period ladder | Saturation-dominated targets | ISS size information restored (truth-attitude cost 0.18 vs impostors 8.8+); global search still open |
 | A10 | Tier-3 torque-free fit: window-laddered multi-start over inertia + rate + attitude via solve_ivp quaternion path | Non-principal-axis tumbles | Attitude error **halved** vs uniform spin (97.8°→50.7° window, 97.6°→56.0° 4 h prediction) |
 | A11 | Glint tier: phase-conditioned cross-sectional detector → facet correspondence → **Wahba's problem** (Davenport q-method) on (body normal, inertial bisector) pairs | Absolute attitude waypoints from specular events; symmetry-twin disambiguation | Waypoints at 2.9° (LINK tumble); oracle gate resolves the v1.5 twin (5.5° vs 86°) and yields 25 waypoints @ 3.4° through the torque-free arc |
-| A12 | Catalog-scale funnel: Malmquist-corrected feature gate + two-channel shortlist (named-hypothesis quick fits ∪ tumble brightness fingerprints) ahead of the full matcher | Identification against hundreds of models at tractable cost | 209-model library: shortlist recall 11/12 on curated validation @ k=16, ~1 s per target for the funnel |
+| A12 | Catalog-scale funnel: Malmquist-corrected feature gate + two-channel shortlist (named-hypothesis quick fits ∪ tumble brightness fingerprints) ahead of the full matcher | Identification against hundreds of models at tractable cost | 209 models, 24 sampled targets, 3 h arcs: exact identity 29%, **family/class 71%**, funnel ~2 s + match ~3 min per target; wrong IDs are dominated by same-family photometric twins that fit within 1.2× of truth |
 
 ---
 
@@ -232,10 +232,38 @@ attitude and array-control mode sets, dimension ranges grounded on
 Gunter's Space Page / eoPortal archetypes) joins the curated models in
 one namespace, and identification runs as an operational funnel:
 periodogram → feature gate (milliseconds) → two-channel shortlist
-(~1 s: named-hypothesis quick fits for stable targets ∪ attitude-free
+(~2 s: named-hypothesis quick fits for stable targets ∪ attitude-free
 brightness-decile fingerprints for tumblers) → full matcher on the
-shortlist only. See `results/library_scale/summary.json` for the full
-per-target table.
+shortlist only (~3 min/target).
+
+**Results, 24 sampled targets on 3 h arcs: top-1 exact identity 29%,
+correct family/class 71%, shortlist recall 71%.** The drop from the
+curated study's 20/21 is the honest price of scale, and it decomposes
+into three structural causes rather than one algorithmic failure:
+
+1. **Look-alike degeneracy — the dominant cause.** 10 of the 17
+   non-top-1 outcomes picked a *same-family twin* (a 3U cubesat for a 3U
+   cubesat, a cylinder for a cylinder), and for targets where truth
+   ranked 2+ the truth-to-winner cost ratio was ≤ 1.21 in 8 of 10
+   cases: the truth fits essentially as well as the winner. Once a
+   catalog contains photometric twins, the *exact* identity is not in
+   the data — class, size, and configuration are. Country of origin is,
+   unsurprisingly, not a photometric observable.
+2. **Self-assessment still works.** Every correct identification has
+   fit cost ≤ 1.0; 13 of 17 wrong ones flag themselves with elevated
+   cost (1.05–25) or a shortlist cut. Four look-alike confusions fit at
+   cost < 1.0 — confident and wrong — and those are exactly the twin
+   cases above, where "one of these near-identical models" is the
+   correct achievable claim.
+3. **Funnel gaps are enumerable.** The seven shortlist cuts cluster in
+   known blind spots: inertially-pointed targets fall between the two
+   channels (the named-fit channel has no inertial hypothesis — a
+   third channel is the fix), the fingerprint channel weakens on 3 h
+   arcs vs the 24 h validation arcs, and one of the two deliberately
+   off-pointed-array targets was cut because *no* hypothesis in the
+   bank flies its control state (the other survived at rank 2).
+
+Per-target rows: `results/library_scale/summary.json`.
 
 ### Validation animations
 
@@ -297,6 +325,13 @@ right panel, error halved vs uniform spin:*
   brightness fingerprints (tumblers) makes the funnel reliable at ~1 s
   per target. Coarse *spin-grid* fitting, by contrast, ranks tumblers
   by noise — measured truth ranks of 25–100 — and was removed.
+- **At catalog scale the product is class + configuration + state, not
+  serial number**: photometric twins within a family fit each other's
+  data at cost ratios ≤1.2, so exact-identity top-1 falls to 29% while
+  family/class holds at 71% on 3 h arcs. The operational deliverable is
+  the ranked shortlist with margins — "one of these three 3U cubesats,
+  in ops attitude, arrays tracking" — plus the non-photometric prior
+  (orbit catalog correlation) that breaks the tie for free in practice.
 
 ## Where to head next
 
@@ -314,12 +349,17 @@ right panel, error halved vs uniform spin:*
    freeze the identified hypothesis, score it in time bins at several
    resolutions, and treat bins where the majority-match fails as
    maneuver/anomaly windows to introspect recursively.
-4. **Per-sensor photometric bias estimation** — the untouched piece of
+4. **Close the funnel's enumerated gaps** from the catalog-scale test:
+   a third shortlist channel for inertially-pointed targets (coarse
+   fixed-attitude grid), arc-length-aware fingerprints, off-pointed
+   array hypotheses in the matcher, and orbit-catalog correlation as
+   the tie-breaking prior among photometric twins.
+5. **Per-sensor photometric bias estimation** — the untouched piece of
    the design doc's calibration story (30k sensors, cooperative
    constellation targets as truth).
-5. **Non-convex shape cues**: shadowing signatures at high phase angles;
+6. **Non-convex shape cues**: shadowing signatures at high phase angles;
    the EGI bounds only the convex hull.
-6. **Real tracklets**: reduce to `ObservationSet`
+7. **Real tracklets**: reduce to `ObservationSet`
    (`src/photometry/measurements.py`) and the identical stack runs — that
    schema is the sim/real seam by construction. The full wiring guide —
    sources by role, the reduction pipeline, the calibration loop, code

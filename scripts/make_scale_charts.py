@@ -80,13 +80,17 @@ def main() -> None:
 
     ax = fig.add_subplot(gs[0, 2])
     hit = [r for r in ok if r["true_rank"] == 1]
-    miss = [r for r in ok if r["true_rank"] != 1]
+    near = [r for r in ok if r["true_rank"] and r["true_rank"] > 1]
+    cut = [r for r in ok if not r["in_shortlist"]]
     ax.scatter([r["top1_cost"] for r in hit],
                [r["margin"] or 1.0 for r in hit], s=42, color=S3_AQUA,
                label="correct top-1")
-    ax.scatter([r["top1_cost"] for r in miss],
-               [r["margin"] or 20.0 for r in miss], s=46, color=S4_MAGENTA,
-               marker="D", label="wrong / cut")
+    ax.scatter([r["top1_cost"] for r in near],
+               [r["margin"] for r in near], s=46, color=S5_YELLOW,
+               marker="s", label="wrong top-1, truth ranked")
+    ax.scatter([r["top1_cost"] for r in cut],
+               [28.0] * len(cut), s=46, color=S4_MAGENTA,
+               marker="D", label="truth cut at shortlist (plotted at top)")
     ax.axhline(1.0, color=BASELINE, lw=1)
     ax.set_xscale("log")
     ax.set_yscale("log")
