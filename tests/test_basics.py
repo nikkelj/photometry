@@ -175,3 +175,56 @@ def test_minkowski_thin_plate_variational():
     assert ext[0] < 0.4          # thin
     assert 2.0 < ext[1] < 4.5    # ~2.7 wide
     assert 5.5 < ext[2] < 10.0   # ~8.1 long
+
+
+def test_davenport_q_recovers_rotation():
+    from photometry.inversion.glint import attitude_error_deg, davenport_q
+
+    rng = np.random.default_rng(3)
+    angle = 1.2
+    axis = np.array([0.3, -0.5, 0.81])
+    axis /= np.linalg.norm(axis)
+    from photometry.frames import rodrigues
+    r_true = rodrigues(axis, angle)
+    b = rng.normal(size=(15, 3))
+    b /= np.linalg.norm(b, axis=1, keepdims=True)
+    r = (r_true @ b.T).T
+    r_est = davenport_q(b, r, np.ones(15))
+    assert attitude_error_deg(r_est, r_true) < 1e-4
+    # planar (two-direction) sets still determine the full rotation
+    b2 = np.stack([np.cos(np.linspace(0, 3, 12)),
+                   np.sin(np.linspace(0, 3, 12)), np.zeros(12)], axis=-1)
+    r2 = (r_true @ b2.T).T
+    assert attitude_error_deg(davenport_q(b2, r2, np.ones(12)), r_true) < 1e-4
+
+
+def test_library200_deterministic_and_valid():
+    from photometry.library200 import generate_library
+
+    lib1, meta1 = generate_library()
+    lib2, _ = generate_library()
+    assert len(lib1) == 200
+    assert len({m["name"] for m in meta1}) == 200
+    for name in ["cn_flat03", "fi_sar01", "ru_rb02"]:
+        s1, s2 = lib1[name](), lib2[name]()
+        assert np.allclose(s1.areas, s2.areas)
+        assert np.allclose(s1.normals, s2.normals)
+    for m in meta1[::17]:
+        s = lib1[m["name"]]()
+        assert np.isfinite(s.areas).all() and (s.areas > 0).all()
+
+
+def test_array_offset_moves_tracked_normals():
+    from photometry.shapes import starlink_v15
+
+    s = starlink_v15()
+    u_sun = np.array([[0.2, 0.5, 0.84]])
+    u_sun /= np.linalg.norm(u_sun)
+    n0 = s.body_normals(u_sun, articulate=True)
+    n1 = s.body_normals(u_sun, articulate=True, offset_deg=25.0)
+    gim = s.gimbal_mode > 0
+    ang = np.degrees(np.arccos(np.clip(
+        np.sum(n0[gim, 0] * n1[gim, 0], axis=-1), -1, 1)))
+    assert np.all(ang > 20.0)          # tracked facets moved ~offset
+    fixed = ~gim
+    assert np.allclose(n0[fixed], n1[fixed])  # fixed facets untouched

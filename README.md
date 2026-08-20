@@ -33,7 +33,10 @@ python scripts/run_model_match.py               # library identification
 python scripts/run_refine.py                    # residual-EGI demo
 python scripts/run_deviation_scan.py            # fleet deviation alerts
 python scripts/run_torquefree.py                # Tier-3 multi-axis fit
+python scripts/run_glints.py                    # glint detector + Wahba waypoints
+python scripts/run_library_scale.py             # 209-model catalog-scale ID test
 python scripts/make_charts.py; python scripts/make_fleet_charts.py
+python scripts/make_glint_chart.py; python scripts/make_scale_charts.py
 python scripts/make_movies.py                   # all validation movies
 python -m pytest tests/
 ```
@@ -101,6 +104,7 @@ caught up. Reading this table top-to-bottom is the development history.
 | T6 | Solar-array articulation: per-facet gimbals (fixed / 1-axis / 2-axis) tracking the sun in the forward model | Arrays are not body-fixed — a fact the inversion must and does confront |
 | T7 | Sensor saturation as *censoring*: saturated streaks recorded as brighter-than-cap lower bounds | ISS-class targets are ~80% censored; dropping those rows biases everything toward small objects |
 | T8 | Torque-free rigid-body tumble (triaxial inertia, nutating ω, energy conserved to 3e-8) | LINK's actual anomaly class: multi-axis spin, no principal-axis shortcut |
+| T9 | Procedural 200-entry hypothetical library (`library200.py`): 11 families × 38 countries with per-family attitude/array-mode sets, ranges grounded on Gunter's Space Page & eoPortal archetypes; array *off-pointing* as a control state the matcher has no hypothesis for | The catalog-scale world: identification must survive hundreds of candidates, and truth flies modes outside the hypothesis bank |
 
 ### Algorithm side — the inversion stack
 
@@ -116,6 +120,8 @@ caught up. Reading this table top-to-bottom is the development history.
 | A8 | Deviation alerting (structure ratio + fit-quality criteria) | Automated "reality vs catalog" flag | **20/21 alert decisions correct** fleet-wide |
 | A9 | Censoring-aware costs (one-sided Tobit terms), stratified sampling, coherent period ladder | Saturation-dominated targets | ISS size information restored (truth-attitude cost 0.18 vs impostors 8.8+); global search still open |
 | A10 | Tier-3 torque-free fit: window-laddered multi-start over inertia + rate + attitude via solve_ivp quaternion path | Non-principal-axis tumbles | Attitude error **halved** vs uniform spin (97.8°→50.7° window, 97.6°→56.0° 4 h prediction) |
+| A11 | Glint tier: phase-conditioned cross-sectional detector → facet correspondence → **Wahba's problem** (Davenport q-method) on (body normal, inertial bisector) pairs | Absolute attitude waypoints from specular events; symmetry-twin disambiguation | Waypoints at 2.9° (LINK tumble); oracle gate resolves the v1.5 twin (5.5° vs 86°) and yields 25 waypoints @ 3.4° through the torque-free arc |
+| A12 | Catalog-scale funnel: Malmquist-corrected feature gate + two-channel shortlist (named-hypothesis quick fits ∪ tumble brightness fingerprints) ahead of the full matcher | Identification against hundreds of models at tractable cost | 209-model library: shortlist recall 11/12 on curated validation @ k=16, ~1 s per target for the funnel |
 
 ---
 
@@ -188,6 +194,49 @@ cannot explain the frozen arrays sweeping with the real rotation.
 
 ![torque-free](results/charts/10_torquefree.png)
 
+### Glint geometry: Wahba's problem on specular events
+
+![glint wahba](results/charts/14_glint_wahba.png)
+
+A specular glint is the one moment photometry yields a *direction*: the
+phase-angle bisector (known in ECI from that row's geometry) coincides
+with a facet normal (known in the body frame from the library model).
+The glint tier detects candidates with a phase-conditioned
+cross-sectional outlier test — brightness is compared against the fleet
+median *at the same rotational phase*, which cancels the diffuse spin
+modulation — then gates them geometrically under an attitude hypothesis,
+which assigns the facet correspondence. Each confirmed glint is a matched
+vector pair, and Davenport's q-method turns a window of pairs into an
+absolute attitude waypoint.
+
+Measured on the tumble scenarios: the geometric gate lifts pair purity to
+~100% (every gated pair is a true glint), waypoints land at 2.9° median
+error for the principal-axis LINK tumble, and two structural results
+follow. First, correctly assigned correspondences **resolve the
+symmetry twin** that scalar photometry cannot (Starlink v1.5: 5.5° with
+oracle gating vs 86° riding the twin). Second, the torque-free arc
+carries **25 recoverable waypoints at 3.4° median** — but only 7 pairs
+survive gating under the coarse principal-axis hypothesis the pipeline
+currently has. That gap is the iterate-refine headroom: waypoints from
+good windows refine the hypothesis, which unlocks more windows, and the
+waypoint sequence is exactly the seeding the Tier-3 dynamics fit lacks.
+
+### Catalog-scale identification: 209 models
+
+![library scale](results/charts/15_library_scale.png)
+
+![library scale table](results/charts/16_library_scale_table.png)
+
+The 200-entry generated library (11 families, 38 countries, per-family
+attitude and array-control mode sets, dimension ranges grounded on
+Gunter's Space Page / eoPortal archetypes) joins the curated models in
+one namespace, and identification runs as an operational funnel:
+periodogram → feature gate (milliseconds) → two-channel shortlist
+(~1 s: named-hypothesis quick fits for stable targets ∪ attitude-free
+brightness-decile fingerprints for tumblers) → full matcher on the
+shortlist only. See `results/library_scale/summary.json` for the full
+per-target table.
+
 ### Validation animations
 
 Each movie shows, in the target's LVLH frame: **left** — truth geometry
@@ -238,21 +287,39 @@ right panel, error halved vs uniform spin:*
   directly identifiable, and an inertially pointed telescope still
   sun-tracks its arrays — omitting that config produced a false alarm
   until modeled.
+- **Glints are geometry, not just nuisance**: the same bright specular
+  rows the Huber cost clips are, read the other way, matched vector
+  pairs for Wahba's problem — and correctly assigned correspondences
+  break symmetry twins that scalar photometry structurally cannot.
+- **Cheap physics beats clever features at catalog scale**: feature
+  heuristics alone could not rank 209 models stably; a ~30 ms
+  named-hypothesis fit per model (stable targets) plus attitude-free
+  brightness fingerprints (tumblers) makes the funnel reliable at ~1 s
+  per target. Coarse *spin-grid* fitting, by contrast, ranks tumblers
+  by noise — measured truth ranks of 25–100 — and was removed.
 
 ## Where to head next
 
-1. **Global search for torque-free states**: CMA-ES or
-   differentiable-dynamics gradients; Nelder-Mead reaches 50° but not
-   the basin floor (truth verifies at cost 1.04 through the same
-   machinery).
+1. **Glint-seeded torque-free fitting**: the Wahba waypoints (A11) are
+   absolute attitude fixes through the tumble arc — fit the dynamics
+   *through the waypoints* instead of searching 10 parameters against
+   scalar brightness (where Nelder-Mead reaches 50° but not the basin
+   floor; truth verifies at cost 1.04). Requires closing the
+   iterate-refine loop: waypoints from well-gated windows refine the
+   hypothesis, unlocking the remaining windows (7 → 134 pairs measured
+   headroom). CMA-ES / differentiable dynamics stay the fallback.
 2. **Harmonic-aware censored period ladder** to close the last
    misidentification (ISS-class tumblers).
-3. **Per-sensor photometric bias estimation** — the untouched piece of
+3. **Maneuver-window change-point scanning** (stored follow-up):
+   freeze the identified hypothesis, score it in time bins at several
+   resolutions, and treat bins where the majority-match fails as
+   maneuver/anomaly windows to introspect recursively.
+4. **Per-sensor photometric bias estimation** — the untouched piece of
    the design doc's calibration story (30k sensors, cooperative
    constellation targets as truth).
-4. **Non-convex shape cues**: shadowing signatures at high phase angles;
+5. **Non-convex shape cues**: shadowing signatures at high phase angles;
    the EGI bounds only the convex hull.
-5. **Real tracklets**: reduce to `ObservationSet`
+6. **Real tracklets**: reduce to `ObservationSet`
    (`src/photometry/measurements.py`) and the identical stack runs — that
    schema is the sim/real seam by construction. The full wiring guide —
    sources by role, the reduction pipeline, the calibration loop, code
