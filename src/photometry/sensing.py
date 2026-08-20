@@ -37,6 +37,7 @@ def simulate_detections(
     sensors: SensorConfig,
     rng: np.random.Generator,
     articulate: bool = False,
+    articulate_offset_deg: float = 0.0,
 ) -> ObservationSet:
     """Step the constellation and target through time and collect detections.
 
@@ -85,7 +86,8 @@ def simulate_detections(
         att_t = np.full(k, float(t))
         u_sun_body = target_attitude.eci_to_body(att_t, np.broadcast_to(sun, (k, 3)).copy())
         u_obs_body = target_attitude.eci_to_body(att_t, u_obs_eci)
-        normals = target_shape.body_normals(u_sun_body, articulate=articulate)
+        normals = target_shape.body_normals(u_sun_body, articulate=articulate,
+                                            offset_deg=articulate_offset_deg)
         mag_true = apparent_magnitude(target_shape, u_sun_body, u_obs_body,
                                       rng_km[sat_idx], normals=normals)
 

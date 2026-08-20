@@ -81,6 +81,7 @@ def match_library(
     n_phases: int = 10,
     seed: int = 0,
     refine_top_k: int = 3,
+    library: dict | None = None,
 ) -> list[MatchResult]:
     """Score every (model, attitude hypothesis, array config); ranked best-first.
 
@@ -88,8 +89,12 @@ def match_library(
     search (denser pole/phase grid, larger sample) for the top-k models —
     a coarse grid can leave a hard-to-fit true model stuck behind a
     mediocre-everywhere impostor.
+
+    `library` swaps in an alternative name->builder dict (e.g. the
+    200-entry generated library); default is the curated shapes.LIBRARY.
     """
-    names = candidates or [n for n in LIBRARY if n != "rocket_body"]
+    lib = library or LIBRARY
+    names = candidates or [n for n in lib if n != "rocket_body"]
     rng = np.random.default_rng(seed)
     sub = stratified_subsample(obs, max_obs, rng)
     prep = prepare_meas(sub)
@@ -102,7 +107,7 @@ def match_library(
 
     def score_model(name: str, sub_, prep_, np_, nph_, mo_,
                     use_ladder=False) -> list[MatchResult]:
-        shape = LIBRARY[name]()
+        shape = lib[name]()
         out: list[MatchResult] = []
         art_options = (True, False) if shape.articulated else (False,)
         for hyp, att in named:

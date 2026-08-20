@@ -82,23 +82,46 @@ class FacetModel:
         return self.rho_d * self.areas
 
     def body_normals(self, u_sun_body: np.ndarray,
-                     articulate: bool = True) -> np.ndarray:
-        """Facet normals (F,K,3) for K sun directions in the body frame."""
+                     articulate: bool = True,
+                     offset_deg: float = 0.0) -> np.ndarray:
+        """Facet normals (F,K,3) for K sun directions in the body frame.
+
+        `offset_deg` models off-pointed array control (power throttling /
+        thermal management): tracked normals are rotated away from the sun
+        by the offset — about the gimbal axis for 1-axis facets, about an
+        axis perpendicular to the sun for 2-axis facets. Zero is exact
+        tracking; the parameter only applies when articulating.
+        """
         k = len(u_sun_body)
         n = np.repeat(self.normals[:, None, :], k, axis=1)
         if not (articulate and self.articulated):
             return n
+        off = np.radians(offset_deg)
+        co, so = np.cos(off), np.sin(off)
         for i in range(self.n_facets):
             if self.mirror_of[i] >= 0:
                 continue
             if self.gimbal_mode[i] == GIMBAL_2AXIS:
                 n[i] = u_sun_body
+                if off != 0.0:
+                    helper = np.array([0.0, 0.0, 1.0])
+                    ax = np.cross(u_sun_body, helper)
+                    bad = np.linalg.norm(ax, axis=-1) < 1e-6
+                    ax[bad] = np.cross(u_sun_body[bad], [0.0, 1.0, 0.0])
+                    ax /= np.linalg.norm(ax, axis=-1, keepdims=True)
+                    v = n[i]
+                    n[i] = (v * co + np.cross(ax, v) * so
+                            + ax * np.sum(ax * v, axis=-1, keepdims=True) * (1 - co))
             elif self.gimbal_mode[i] == GIMBAL_1AXIS:
                 g = self.gimbal_axis[i]
                 s_perp = u_sun_body - np.outer(u_sun_body @ g, g)
                 nrm = np.linalg.norm(s_perp, axis=-1, keepdims=True)
                 ok = nrm[:, 0] > 1e-9
                 n[i, ok] = s_perp[ok] / nrm[ok]
+                if off != 0.0:
+                    v = n[i]
+                    n[i] = (v * co + np.cross(g, v) * so
+                            + g * (v @ g)[:, None] * (1 - co))
         for i in range(self.n_facets):
             if self.mirror_of[i] >= 0:
                 n[i] = -n[self.mirror_of[i]]
