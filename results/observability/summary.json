@@ -1,0 +1,48 @@
+{
+ "scenario": "katalyst_link__tumble",
+ "stable_scenario": "starlink_v15__ops",
+ "n_constellation": 10000,
+ "period_true_s": 127.4,
+ "rows": [
+  {
+   "n_sats": 30,
+   "seed": 0,
+   "n_rows": 45,
+   "n_rows_stable": 37,
+   "n_observers": 7,
+   "obs": 0.07,
+   "pab": 0.056666666666666664,
+   "median_gap_s": 6.0
+  },
+  {
+   "n_sats": 300,
+   "seed": 0,
+   "n_rows": 612,
+   "n_rows_stable": 569,
+   "n_observers": 65,
+   "obs": 0.38333333333333336,
+   "pab": 0.21333333333333335,
+   "median_gap_s": 6.0,
+   "period_peak_s": 566.8111669845673,
+   "period_err_frac": 1.2245336223884116,
+   "period_ok": false,
+   "t_periodogram": 1.5892786979675293,
+   "pole_err_deg": 84.93443935252618,
+   "period_fit_err_frac": 7.900652244308652,
+   "body_axis": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "fit_cost": 52.145446782621306,
+   "t_pole": 7.670942783355713,
+   "egi_within_15deg": 0.014913302920406804,
+   "t_egi": 0.5581965446472168,
+   "n_glint_candidates": 4,
+   "n_wahba_pairs": 0,
+   "n_waypoints": 0,
+   "waypoint_err_median_deg": null,
+   "t_glint": 0.00923919677734375
+  }
+ ]
+}
