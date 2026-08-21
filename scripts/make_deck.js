@@ -253,6 +253,20 @@ s.addText([
   { text: "the ranked shortlist with margins — “one of these three 3U cubesats, ops attitude, arrays tracking” — plus orbit-catalog correlation as the free tie-breaker.", options: {} },
 ], { x: 7.15, y: 5.0, w: 5.65, h: 2.3, fontSize: 12.5, color: INK2, margin: 0, valign: "top" });
 
+// ------------------------------------- 11d. observability trade
+s = pres.addSlide();
+base(s, "results — observability trade", "How many observers before the tomography turns on?");
+img(s, CHARTS + "/17_observability_trade.png", 0.55, 1.5, 8.35, 5.7);
+s.addText([
+  { text: "A smaller constellation is an observer-ID subsample of the full-fleet run — same shell, same chain, N of 10,000 IDs kept.\n\n", options: {} },
+  { text: "The answer is a phase transition at N ≈ 300–1,000: ", options: { bold: true, color: ORANGE } },
+  { text: "period recovery 0/3 seeds at 300, 3/3 at 1,000 — and the instant it locks, pole error collapses 85° → 0.1° and EGI jumps to 55–89%, both already at full-fleet quality.\n\n", options: {} },
+  { text: "Binding resource: sampling density, not geometry. ", options: { bold: true, color: BLUE } },
+  { text: "Directional coverage saturates (~50%, sun-capped at 56%) before period success climbs. And there is no single-observer regime: 1 satellite ≈ 0–3 detections/day.\n\n", options: {} },
+  { text: "What still scales at 10k: ", options: { bold: true, color: MAGENTA } },
+  { text: "Wahba vector pairs (0 → 4 → 12 → 37/day) — the glint channel earns the full fleet after every scalar metric saturates.", options: {} },
+], { x: 9.1, y: 1.7, w: 3.75, h: 5.5, fontSize: 11.5, color: INK2, margin: 0, valign: "top" });
+
 // ------------------------------------------------- 12. movies
 s = pres.addSlide();
 base(s, "results — validation movies", "Watching the inversion against nav truth");

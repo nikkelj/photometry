@@ -17,3 +17,10 @@ N=   300 seed=0 rows=   612 cov_obs=0.38 P_ok=False pole=84.93 egi=0.01 wp=0
 N=   300 seed=1 rows=   843 cov_obs=0.41 P_ok=False pole=88.37 egi=0.00 wp=0
 N=   300 seed=2 rows=   934 cov_obs=0.41 P_ok=False pole=85.02 egi=0.00 wp=0
 N=  1000 seed=0 rows=  2618 cov_obs=0.52 P_ok=True pole=0.15 egi=0.89 wp=0
+N=  1000 seed=1 rows=  2969 cov_obs=0.52 P_ok=True pole=0.08 egi=0.55 wp=0
+N=  1000 seed=2 rows=  2662 cov_obs=0.51 P_ok=True pole=0.03 egi=0.62 wp=0
+N=  3000 seed=0 rows=  7703 cov_obs=0.54 P_ok=True pole=0.07 egi=0.82 wp=1
+N=  3000 seed=1 rows=  7299 cov_obs=0.54 P_ok=True pole=0.46 egi=0.89 wp=0
+N=  3000 seed=2 rows=  7830 cov_obs=0.53 P_ok=True pole=1.11 egi=0.74 wp=0
+N= 10000 seed=0 rows= 26857 cov_obs=0.56 P_ok=True pole=0.10 egi=0.84 wp=2
+wrote results/observability/summary.json

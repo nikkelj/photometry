@@ -116,6 +116,10 @@ def main() -> None:
     ax.set_xscale("log"); ax.set_yscale("log")
     ax.set_xlabel("observing satellites"); ax.set_ylabel("spin-pole error (deg)")
     ax.set_title("Attitude: pole error collapses at the\nperiod threshold", fontsize=11)
+    ax.text(0.03, 0.05,
+            "left-of-knee lows are lucky seeds riding a wrong period —\n"
+            "not usable attitude (period unrecovered below N≈1000)",
+            transform=ax.transAxes, fontsize=8.5, color=MUTED)
     ax.legend(fontsize=9)
 
     # (e) EGI quality

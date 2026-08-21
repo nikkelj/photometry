@@ -297,6 +297,55 @@ right panel, error halved vs uniform spin:*
 
 ---
 
+## Observability trade: how many observers before the tomography turns on
+
+Every detection in the full-fleet runs carries its observer's ID, so a
+smaller constellation is exactly an observer-ID subsample of the same
+simulation: choose N of the 10,000 satellites, keep only their rows, and
+run the identical inversion chain. Chart 17 sweeps
+N ∈ {1 … 10,000} (3 seeds per size) on the katalyst-LINK tumble:
+
+![observability trade](results/charts/17_observability_trade.png)
+
+**The answer is a phase transition, not a slope — and it sits between
+300 and 1,000 observers for this target.** Period recovery is 0/3 seeds
+at N = 300 (~850 rows/day) and 3/3 at N = 1,000 (~2,700 rows/day); the
+moment the period locks, spin-pole error collapses from ~85° to ~0.1°
+and EGI quality jumps from ~0 to 55–89% — both immediately at
+full-fleet quality. Nothing about the attitude or shape fit improves
+gradually: the chain is gated by coherent period acquisition, which is
+a detection-statistics threshold (the 127 s line must clear the noise
+floor of an ~17,000-frequency search over a 24 h arc).
+
+Three structural readings:
+
+1. **The binding resource at the knee is temporal sampling density, not
+   angular diversity.** Directional coverage saturates early — ~50% of
+   direction cells by N = 1,000, capped near 56% by sun-side visibility
+   — while period success is still climbing. The tomographic geometry
+   is "enough" long before the sampling is.
+2. **There is no single-observer regime at all.** One tracker-bearing
+   satellite logs ~0–3 detections of this target *per day* (narrow FOV,
+   fleeting transits); even 30 observers yield ~40–100. The fleet is
+   not an incremental improvement on a classical light curve — below
+   N ≈ 100 there is effectively no light curve.
+3. **Glint geometry is the one product still buying capability at full
+   scale.** Wahba vector-pair yield is zero below the knee, ~4/day at
+   N = 1,000, ~12 at 3,000, 37 at 10,000 — supra-threshold and still
+   roughly linear at sizes where every scalar metric has saturated. If
+   the mission case rests on scalar fits alone, ~1,000–3,000
+   distributed sensors capture nearly all of it; the 10,000-sat fleet
+   earns its keep in the vector-pair channel (and in per-target
+   revisit/latency, which this 24 h-batch study does not price).
+
+Caveats scoped in the script: one target class and one spin state
+(127 s principal-axis; slower tumblers need proportionally less
+sampling), random ID subsets rather than re-optimized Walker
+geometries, and 24 h batches (an operational system would accumulate
+sub-knee targets across days — the knee is per-arc, not fundamental).
+
+---
+
 ## Standing findings
 
 - **Altitude visibility envelope**: +5°-canted trackers only see objects
