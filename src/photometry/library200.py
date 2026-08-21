@@ -361,11 +361,194 @@ def generate_library(seed: int = 11):
     return library, metadata
 
 
+# ---------------------------------------------------------------------------
+# Named intelligence-satellite annex: living Yaogan / Kosmos / IGS classes
+# ---------------------------------------------------------------------------
+# These programs publish no engineering data; the geometries below are
+# box-wing photometric stand-ins assembled from open-source estimates
+# (Gunter's Space Page class entries, russianspaceweb.com, globalsecurity
+# .org, launch-mass figures) — deliberately coarser truth claims than the
+# curated commercial models. Key anchors: Persona ~7 t, 1.5 m primary,
+# Yantar/Resurs-DK heritage cylinder, cruciform arrays (modeled as one
+# wing pair); Bars-M ~4 t cartography; Lotos-S ~6 t ELINT with large
+# deployed arrays; Yaogan EO on Phoenix-Eye-2-class bus, Yaogan SAR with
+# deployable planar aperture, Yaogan NOSS-style ELINT triplet members on
+# CAST2000-class buses (~1100 km / 63.4°); IGS Optical / Radar ~1.2-2 t
+# with deployable wings, SAR aperture on the radar birds.
+
+
+def _intel(name, build_fn, att_modes, arr_modes):
+    return dict(name=name, build=build_fn, attitude_modes=att_modes,
+                array_modes=arr_modes)
+
+
+def cn_yaogan_eo() -> FacetModel:
+    """Yaogan optical (JB-6 / Phoenix-Eye-2-class): nadir telescope prism +
+    two 1-axis wings."""
+    b = _Builder("cn_yaogan_eo")
+    b.prism((0, 0, 0), (0, 0, 1), 3.2, 1.8, 6, MLI, (MLI, DARK), "tube")
+    for sign, tag in [(1, "+y"), (-1, "-y")]:
+        cy = sign * (0.9 + 0.3 + 1.6)
+        b.panel((0, cy, 0.4), (1, 0, 0), (0, sign, 0), 2.0, 3.2, CELLS,
+                PANEL_BACK, f"wing {tag}", gimbal=GIMBAL_1AXIS,
+                gimbal_axis=(0, 1, 0))
+    return b.build()
+
+
+def cn_yaogan_sar() -> FacetModel:
+    """Yaogan SAR (JB-7-class): box bus, deployable planar SAR aperture
+    (nadir), two wings."""
+    b = _Builder("cn_yaogan_sar")
+    b.box((0, 0, 0), (2.2, 2.0, 2.8), MLI, "bus")
+    b.panel((0, 0, -1.6), (0, 1, 0), (1, 0, 0), 6.0, 2.6, ANTENNA, MLI,
+            "sar aperture")  # normal -z
+    for sign, tag in [(1, "+y"), (-1, "-y")]:
+        cy = sign * (1.0 + 0.3 + 2.1)
+        b.panel((0, cy, 0.6), (1, 0, 0), (0, sign, 0), 2.4, 4.2, CELLS,
+                PANEL_BACK, f"wing {tag}", gimbal=GIMBAL_1AXIS,
+                gimbal_axis=(0, 1, 0))
+    return b.build()
+
+
+def cn_yaogan_elint() -> FacetModel:
+    """Yaogan NOSS-style ELINT triplet member (CAST2000-class): small box,
+    fixed panel pair, antenna-farm nadir face."""
+    b = _Builder("cn_yaogan_elint")
+    b.box((0, 0, 0), (1.4, 1.4, 1.8), MLI, "bus",
+          mats=[MLI, MLI, MLI, MLI, MLI, ANTENNA])
+    for sign, tag in [(1, "+y"), (-1, "-y")]:
+        cy = sign * (0.7 + 0.15 + 1.1)
+        b.panel((0, cy, 0), (0, 0, 1), (0, sign, 0), 1.6, 2.2, CELLS,
+                PANEL_BACK, f"panel {tag}")  # fixed
+    return b.build()
+
+
+def ru_persona() -> FacetModel:
+    """Persona (14F137) optical recon: Yantar/Resurs-DK-heritage cylinder
+    (~7 t, 1.5 m primary), wing pair standing in for the cruciform set."""
+    b = _Builder("ru_persona")
+    b.prism((0, 0, 0), (0, 0, 1), 6.5, 2.7, 10, MLI_SILVER, (MLI, DARK),
+            "hull")  # optical axis nadir (-z aperture)
+    for sign, tag in [(1, "+y"), (-1, "-y")]:
+        cy = sign * (1.35 + 0.4 + 2.4)
+        b.panel((0, cy, 1.0), (1, 0, 0), (0, sign, 0), 2.6, 4.8, CELLS,
+                PANEL_BACK, f"wing {tag}", gimbal=GIMBAL_1AXIS,
+                gimbal_axis=(0, 1, 0))
+    return b.build()
+
+
+def ru_bars_m() -> FacetModel:
+    """Bars-M cartography (~4 t): conic-cylinder stand-in + two wings."""
+    b = _Builder("ru_bars_m")
+    b.prism((0, 0, 0), (0, 0, 1), 4.0, 2.4, 8, MLI, (MLI, DARK), "hull")
+    for sign, tag in [(1, "+y"), (-1, "-y")]:
+        cy = sign * (1.2 + 0.3 + 1.9)
+        b.panel((0, cy, 0.6), (1, 0, 0), (0, sign, 0), 2.2, 3.8, CELLS,
+                PANEL_BACK, f"wing {tag}", gimbal=GIMBAL_1AXIS,
+                gimbal_axis=(0, 1, 0))
+    return b.build()
+
+
+def ru_lotos_s() -> FacetModel:
+    """Lotos-S ELINT (Liana, ~6 t): long cylinder, large wing pair, nadir
+    antenna farm."""
+    b = _Builder("ru_lotos_s")
+    b.prism((0, 0, 0), (1, 0, 0), 8.0, 2.9, 10, MLI, (MLI, DARK), "hull")
+    b.panel((0, 0, -1.6), (0, 1, 0), (1, 0, 0), 5.0, 1.8, ANTENNA, MLI,
+            "antenna farm")  # normal -z
+    for sign, tag in [(1, "+y"), (-1, "-y")]:
+        cy = sign * (1.45 + 0.4 + 3.0)
+        b.panel((0, cy, 0.6), (1, 0, 0), (0, sign, 0), 3.0, 6.0, CELLS,
+                PANEL_BACK, f"wing {tag}", gimbal=GIMBAL_1AXIS,
+                gimbal_axis=(0, 1, 0))
+    return b.build()
+
+
+def jp_igs_optical() -> FacetModel:
+    """IGS-Optical (~1.2-2 t, classified; ALOS/NEXTAR-heritage stand-in):
+    box bus, nadir aperture, one wing pair."""
+    b = _Builder("jp_igs_optical")
+    b.box((0, 0, 0), (1.6, 1.6, 2.6), MLI, "bus",
+          mats=[MLI, MLI, MLI, MLI, MLI, DARK])
+    for sign, tag in [(1, "+y"), (-1, "-y")]:
+        cy = sign * (0.8 + 0.25 + 1.7)
+        b.panel((0, cy, 0.3), (1, 0, 0), (0, sign, 0), 1.9, 3.4, CELLS,
+                PANEL_BACK, f"wing {tag}", gimbal=GIMBAL_1AXIS,
+                gimbal_axis=(0, 1, 0))
+    return b.build()
+
+
+def jp_igs_radar() -> FacetModel:
+    """IGS-Radar (~1.2 t): box bus, deployable planar SAR aperture, wing
+    pair."""
+    b = _Builder("jp_igs_radar")
+    b.box((0, 0, 0), (1.5, 1.5, 2.2), MLI, "bus")
+    b.panel((0, 0, -1.3), (0, 1, 0), (1, 0, 0), 3.6, 2.4, ANTENNA, MLI,
+            "sar aperture")  # normal -z
+    for sign, tag in [(1, "+y"), (-1, "-y")]:
+        cy = sign * (0.75 + 0.25 + 1.6)
+        b.panel((0, cy, 0.4), (1, 0, 0), (0, sign, 0), 1.8, 3.2, CELLS,
+                PANEL_BACK, f"wing {tag}", gimbal=GIMBAL_1AXIS,
+                gimbal_axis=(0, 1, 0))
+    return b.build()
+
+
+INTEL_ANNEX = [
+    _intel("cn_yaogan_eo", cn_yaogan_eo,
+           ["ops", "safe_sun", "tumble"], ["track", "frozen"]),
+    _intel("cn_yaogan_sar", cn_yaogan_sar,
+           ["ops", "safe_sun", "tumble"], ["track", "frozen"]),
+    _intel("cn_yaogan_elint", cn_yaogan_elint,
+           ["ops", "tumble"], []),
+    _intel("ru_persona", ru_persona,
+           ["ops", "safe_sun", "tumble"], ["track", "frozen"]),
+    _intel("ru_bars_m", ru_bars_m,
+           ["ops", "safe_sun", "tumble"], ["track", "frozen"]),
+    _intel("ru_lotos_s", ru_lotos_s,
+           ["ops", "safe_sun", "tumble"], ["track", "frozen"]),
+    _intel("jp_igs_optical", jp_igs_optical,
+           ["ops", "safe_sun", "tumble"], ["track", "frozen"]),
+    _intel("jp_igs_radar", jp_igs_radar,
+           ["ops", "safe_sun", "tumble"], ["track", "frozen"]),
+]
+
+_INTEL_FAMILY = {
+    "cn_yaogan_eo": "eo_imager", "cn_yaogan_sar": "sar_sat",
+    "cn_yaogan_elint": "smallsat", "ru_persona": "eo_imager",
+    "ru_bars_m": "eo_imager", "ru_lotos_s": "science_bus",
+    "jp_igs_optical": "eo_imager", "jp_igs_radar": "sar_sat",
+}
+
+
+def intel_annex():
+    """(library, metadata) for the named intelligence-satellite annex."""
+    library: dict = {}
+    metadata: list[dict] = []
+    for e in INTEL_ANNEX:
+        shape = e["build"]()
+        arr_modes = e["array_modes"] if shape.articulated else []
+        metadata.append(dict(
+            name=e["name"], family=_INTEL_FAMILY[e["name"]],
+            country=e["name"].split("_")[0], n_facets=shape.n_facets,
+            diffuse_albedo_area_m2=float(shape.diffuse_albedo_area().sum()),
+            total_area_m2=float(shape.areas.sum()),
+            articulated=bool(shape.articulated),
+            attitude_modes=e["attitude_modes"], array_modes=arr_modes,
+            annex="intel",
+        ))
+        library[e["name"]] = e["build"]
+    return library, metadata
+
+
 def full_library(seed: int = 11):
-    """Generated 200 + the curated hand-built models, one namespace."""
+    """Generated 200 + intel annex + curated hand-built models, one
+    namespace."""
     from .shapes import LIBRARY
 
     lib, meta = generate_library(seed)
+    annex_lib, annex_meta = intel_annex()
+    lib.update(annex_lib)
+    meta.extend(annex_meta)
     for name, fn in LIBRARY.items():
         lib[name] = fn
     return lib, meta

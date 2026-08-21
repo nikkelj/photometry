@@ -34,7 +34,7 @@ python scripts/run_refine.py                    # residual-EGI demo
 python scripts/run_deviation_scan.py            # fleet deviation alerts
 python scripts/run_torquefree.py                # Tier-3 multi-axis fit
 python scripts/run_glints.py                    # glint detector + Wahba waypoints
-python scripts/run_library_scale.py             # 209-model catalog-scale ID test
+python scripts/run_library_scale.py             # 217-model catalog-scale ID test
 python scripts/make_charts.py; python scripts/make_fleet_charts.py
 python scripts/make_glint_chart.py; python scripts/make_scale_charts.py
 python scripts/make_movies.py                   # all validation movies
@@ -104,7 +104,7 @@ caught up. Reading this table top-to-bottom is the development history.
 | T6 | Solar-array articulation: per-facet gimbals (fixed / 1-axis / 2-axis) tracking the sun in the forward model | Arrays are not body-fixed — a fact the inversion must and does confront |
 | T7 | Sensor saturation as *censoring*: saturated streaks recorded as brighter-than-cap lower bounds | ISS-class targets are ~80% censored; dropping those rows biases everything toward small objects |
 | T8 | Torque-free rigid-body tumble (triaxial inertia, nutating ω, energy conserved to 3e-8) | LINK's actual anomaly class: multi-axis spin, no principal-axis shortcut |
-| T9 | Procedural 200-entry hypothetical library (`library200.py`): 11 families × 38 countries with per-family attitude/array-mode sets, ranges grounded on Gunter's Space Page & eoPortal archetypes; array *off-pointing* as a control state the matcher has no hypothesis for | The catalog-scale world: identification must survive hundreds of candidates, and truth flies modes outside the hypothesis bank |
+| T9 | Procedural 200-entry hypothetical library (`library200.py`): 11 families × 38 countries with per-family attitude/array-mode sets, ranges grounded on Gunter's Space Page & eoPortal archetypes; array *off-pointing* as a control state the matcher has no hypothesis for; a named intelligence-satellite annex (living Yaogan EO/SAR/ELINT-triplet, Kosmos Persona/Bars-M/Lotos-S, IGS Optical/Radar classes) built from open-source estimates | The catalog-scale world: identification must survive hundreds of candidates, and truth flies modes outside the hypothesis bank |
 
 ### Algorithm side — the inversion stack
 
@@ -221,7 +221,7 @@ currently has. That gap is the iterate-refine headroom: waypoints from
 good windows refine the hypothesis, which unlocks more windows, and the
 waypoint sequence is exactly the seeding the Tier-3 dynamics fit lacks.
 
-### Catalog-scale identification: 209 models
+### Catalog-scale identification: 209 models (217 after the intel annex)
 
 ![library scale](results/charts/15_library_scale.png)
 
@@ -263,7 +263,13 @@ into three structural causes rather than one algorithmic failure:
    off-pointed-array targets was cut because *no* hypothesis in the
    bank flies its control state (the other survived at rank 2).
 
-Per-target rows: `results/library_scale/summary.json`.
+Per-target rows: `results/library_scale/summary.json`. (The recorded
+run predates the 8-model intelligence annex — living Yaogan EO/SAR/ELINT,
+Kosmos Persona/Bars-M/Lotos-S, IGS Optical/Radar classes, built from
+open-source estimates since these programs publish no engineering data.
+The annex joins `full_library()` automatically, so future scale runs
+sweep it; its family cousins in the generated library are exactly the
+photometric-twin ambiguity the margins are designed to expose.)
 
 ### Validation animations
 

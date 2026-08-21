@@ -214,6 +214,29 @@ def test_library200_deterministic_and_valid():
         assert np.isfinite(s.areas).all() and (s.areas > 0).all()
 
 
+def test_intel_annex_in_full_library():
+    from photometry.library200 import full_library, intel_annex
+
+    alib, ameta = intel_annex()
+    assert set(alib) == {
+        "cn_yaogan_eo", "cn_yaogan_sar", "cn_yaogan_elint", "ru_persona",
+        "ru_bars_m", "ru_lotos_s", "jp_igs_optical", "jp_igs_radar"}
+    lib, meta = full_library()
+    assert set(alib) <= set(lib)
+    names = [m["name"] for m in meta]
+    assert len(names) == len(set(names))  # annex collides with nothing
+    for name, fn in alib.items():
+        s = fn()
+        assert np.isfinite(s.areas).all() and (s.areas > 0).all()
+        assert len(s.polygons) > 0  # drawable for the movie layer
+        # two-sided panels and closed boxes/prisms: EGI closure holds
+        closure = (s.areas[:, None] * s.normals).sum(axis=0)
+        assert np.linalg.norm(closure) < 1e-6 * s.areas.sum()
+    # SAR birds carry a specular aperture the glint gate can use
+    from photometry.inversion.glint import specular_facets
+    assert len(specular_facets(alib["jp_igs_radar"]())) > 0
+
+
 def test_array_offset_moves_tracked_normals():
     from photometry.shapes import starlink_v15
 
