@@ -268,8 +268,12 @@ run predates the 8-model intelligence annex — living Yaogan EO/SAR/ELINT,
 Kosmos Persona/Bars-M/Lotos-S, IGS Optical/Radar classes, built from
 open-source estimates since these programs publish no engineering data.
 The annex joins `full_library()` automatically, so future scale runs
-sweep it; its family cousins in the generated library are exactly the
-photometric-twin ambiguity the margins are designed to expose.)
+sweep it. End-to-end smoke against all 217 models: a Persona in LVLH
+ops is identified exactly — rank 1 — while a tumbling IGS-Radar is cut
+at the shortlist by the known tumbler-fingerprint blind spot on 3 h
+arcs, landing on a rocket-body impostor: the annex reproduces both the
+funnel's strength on stable targets and its documented gap, on its
+first contact.)
 
 ### Validation animations
 
