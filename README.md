@@ -35,6 +35,8 @@ python scripts/run_deviation_scan.py            # fleet deviation alerts
 python scripts/run_torquefree.py                # Tier-3 multi-axis fit
 python scripts/run_glints.py                    # glint detector + Wahba waypoints
 python scripts/run_library_scale.py             # 217-model catalog-scale ID test
+python scripts/run_observability_trade.py       # constellation-size knee
+python scripts/run_slew_study.py                # pre-burn yaw-around study
 python scripts/make_charts.py; python scripts/make_fleet_charts.py
 python scripts/make_glint_chart.py; python scripts/make_scale_charts.py
 python scripts/make_movies.py                   # all validation movies
@@ -304,6 +306,60 @@ inside the real station) and flagged by its outlier cost:*
 right panel, error halved vs uniform spin:*
 
 ![LINK multiaxis](results/movies/katalyst_link__multiaxis_tumble.gif)
+
+---
+
+## Maneuver-slew detectability: pre-burn yaw-arounds
+
+Satellites commonly yaw 90° or 180° over several minutes before an
+orbit-adjust burn, hold through it, and slew back. Chart 18 tests the
+stack against exactly that profile (6 min out, 15 min hold, 6 min
+return, mid-arc) on four craft spanning the observability spectrum —
+1-axis-array birds (Starlink v1.5, Persona, Yaogan-SAR) and the
+predicted worst case, a 2-axis-array flat-sat (v2 mini) whose arrays
+stay sun-locked through the slew:
+
+![slew detectability](results/charts/18_slew_detectability.png)
+
+**Detection: unambiguous, immediate, on every vehicle class tested.**
+All 8 maneuvers fire the windowed nominal-residual detector at robust-z
+281–1204 within 0–60 s of slew start (one window), against control-run
+maxima of 4.1 — zero false alarms. Even the "silent" flat-sat case is
+loud: the 2-axis gimbals keep the cell side sun-locked, but the panel
+*backs* and bus edges still swing, and ~25 rows/min of fleet sampling
+resolves it easily. Detection on the many-minute timescale is simply
+not in question.
+
+**Characterization: excellent for 90°, transient-only for 180°.**
+- *90° yaw-arounds*: the held attitude is visibly non-nominal for the
+  whole burn, so the windowed constant-yaw estimator locks the hold at
+  90° (mod the ± twin) and the parametric `LvlhYawSlew` fit recovers
+  hold yaw to **0.1–0.2°** and slew start to **±0.5–2 min**. Durations
+  are softer (slew −2 to −5 min, hold +5 to −14 min): the smoothstep
+  tails are photometrically shallow, so the transition edges blur.
+- *180° yaw-arounds*: the residual **collapses back to baseline during
+  the hold** — a mirror-symmetric bus held at 180° is photometrically
+  identical to nominal, and the yaw estimator duly reads 0° through
+  the burn. Every bit of information lives in the two ~6-min
+  transients. When both transients are seen, the burn window is still
+  bracketed to a couple of windows (Persona 180°: t₀ error −7 s); when
+  the fit must interpolate between two isolated spikes over a flat
+  cost basin, it can slide (v2 mini 180°: t₀ error +18 min). The
+  windowed z-trace itself is not fooled — the two spikes are plainly
+  visible — the *parametric* profile is what degenerates.
+- One parametric-fit outlier (Yaogan-SAR 90°: yaw error 70° in a
+  secondary basin despite a clean windowed track at 90°) makes the
+  operational ordering clear: **the windowed detector + yaw track is
+  the robust product; the parametric fit is the refinement**, to be
+  trusted when its cost beats the windowed track's implied cost, not
+  before.
+
+Upgrade paths if slew work becomes a mission focus: matched-filter the
+windowed scan with the slew profile instead of constant-yaw steps;
+harvest the transients with the glint/Wahba tier (a slewing body sweeps
+its specular normals across the fleet's bisectors — transients should
+be glint-burst-rich); and fold detections into the stored
+change-point/maneuver-window scanning design.
 
 ---
 

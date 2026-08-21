@@ -267,6 +267,22 @@ s.addText([
   { text: "Wahba vector pairs (0 → 4 → 12 → 37/day) — the glint channel earns the full fleet after every scalar metric saturates.", options: {} },
 ], { x: 9.1, y: 1.7, w: 3.75, h: 5.5, fontSize: 11.5, color: INK2, margin: 0, valign: "top" });
 
+// ------------------------------------- 11e. maneuver slews
+s = pres.addSlide();
+base(s, "results — maneuver slews", "Pre-burn 90/180° yaw-arounds: detect always, characterize by symmetry");
+img(s, CHARTS + "/18_slew_detectability.png", 0.55, 1.5, 8.0, 5.7);
+s.addText([
+  { text: "6 min yaw-out, 15 min burn hold, 6 min return — 4 craft × {90°, 180°} + controls.\n\n", options: {} },
+  { text: "Detection: 8/8 at robust-z 281–1204, latency ≤ 60 s, controls ≤ 4.1, zero false alarms. ", options: { bold: true, color: AQUA } },
+  { text: "Even the 2-axis-array flat-sat is loud: panel backs and bus edges swing even when the cells stay sun-locked.\n\n", options: {} },
+  { text: "90° holds: fully characterized ", options: { bold: true, color: BLUE } },
+  { text: "— hold yaw to 0.1–0.2°, slew start ±0.5–2 min; durations softer (shallow smoothstep tails).\n\n", options: {} },
+  { text: "180° holds are invisible ", options: { bold: true, color: ORANGE } },
+  { text: "on mirror-symmetric buses — residual returns to baseline mid-burn; the two transients carry everything. Both seen → burn bracketed to ~1 min (Persona: −7 s); fit interpolating a flat basin can slide (v2 mini: +18 min).\n\n", options: {} },
+  { text: "Product ordering: ", options: { bold: true, color: YELLOW } },
+  { text: "windowed z + yaw track is the robust detector; the parametric slew fit is the refinement.", options: {} },
+], { x: 8.75, y: 1.65, w: 4.1, h: 5.6, fontSize: 11, color: INK2, margin: 0, valign: "top" });
+
 // ------------------------------------------------- 12. movies
 s = pres.addSlide();
 base(s, "results — validation movies", "Watching the inversion against nav truth");
