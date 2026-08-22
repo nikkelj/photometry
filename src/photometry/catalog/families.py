@@ -87,6 +87,7 @@ def oneweb() -> FacetModel:
           mats=[MLI, MLI, MLI, MLI, MLI, ANTENNA])
     # KeepTrack ARROW span 5 m: 1.0 m bus + 2×0.3 m boom + 2×1.7 m wings.
     # Earlier 2.0 m wings produced 5.6 m tip-to-tip (too long vs the cite).
+    # ±y wings, hinge along +y (boom): 1-axis, out-of-plane cosine loss remains.
     _two_wing(b, bus, (1.0, 1.7), gimbal=GIMBAL_1AXIS)
     b.meta(
         family_id="oneweb",
@@ -108,8 +109,12 @@ def oneweb() -> FacetModel:
         thrust_notes="Searched Busek/SpaceNews (BHT-350 for EOR, SK, CA, "
                      "deorbit) and Gunter (SPT-50/BHT-350). No body-frame "
                      "vs ram/nadir published — vector left empty.",
+        flight_attitude=ATT_LVLH,
     )
-    return b.build()
+    return b.build().set_look(
+        "bus -z", (0, 0, -1), attitude=ATT_LVLH,
+        notes="Ku/Ka user face; Earth-pointing service (nadir in LVLH).",
+        status=STATUS_TYPICAL)
 
 
 def kuiper() -> FacetModel:
@@ -147,8 +152,14 @@ def kuiper() -> FacetModel:
         thrust_notes="Searched FCC Kuiper PDFs and eoPortal (krypton Hall "
                      "exists). No thrust-axis vs ram/nadir/sun published — "
                      "vector left empty.",
+        flight_attitude=ATT_LVLH,
     )
-    return b.build()
+    return b.build().set_look(
+        "bus -z", (0, 0, -1), attitude=ATT_LVLH,
+        notes="User phased-array face is Earth-pointing in public imagery; "
+              "exact body-frame boresight unpublished — −z is the stand-in "
+              "nadir face, tagged typical_class.",
+        status=STATUS_TYPICAL)
 
 
 def qianfan() -> FacetModel:
@@ -300,8 +311,14 @@ def iceye() -> FacetModel:
                           "arrays": STATUS_RANGE, "thrust_vector": STATUS_UNKNOWN},
         thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_UNKNOWN,
         thrust_notes="Propulsion type/pointing not used as a public number.",
+        flight_attitude=ATT_LVLH,
     )
-    return b.build()
+    return b.build().set_look(
+        "sar", None, attitude=ATT_LVLH,
+        notes="Side-looking X-band AESA. Off-nadir look angle is not in "
+              "the product-guide public numbers — not invented. Rest face "
+              "in this stand-in is −z only as a placed panel, not an ops look.",
+        status=STATUS_UNKNOWN)
 
 
 def _cubesat(family_id: str, xyz, name: str) -> FacetModel:
@@ -349,7 +366,10 @@ def geo_bus() -> FacetModel:
     # Mid-class 15–30 m span ≈ 22.8 m: 2.0 + 2×0.4 boom + 2×10.0 wings.
     _two_wing(b, bus, (3.2, 10.0), gimbal=GIMBAL_2AXIS, boom=0.4)
     b.panel((0, 0, -3.2 / 2 - 0.4), (0, 1, 0), (1, 0, 0), 2.5, 2.5,
-            ANTENNA, MLI, "nadir dish")
+            ANTENNA, MLI, "nadir dish",
+            look_body=(0, 0, -1), look_attitude=ATT_NADIR,
+            look_notes="3-axis GEO class: unfurlable / Gregorian Earth face.",
+            look_status=STATUS_TYPICAL)
     b.meta(
         family_id="geo_bus",
         sources=("Class convention for 3-axis GEO comms: box bus, 2-axis "
@@ -368,6 +388,7 @@ def geo_bus() -> FacetModel:
                      "convention for chemical/EP station-keeping, not a "
                      "measured Hall vector on a named satellite. E/W (±x) "
                      "also exists. Not invented ion pointing.",
+        flight_attitude=ATT_NADIR,
     )
     return b.build()
 
@@ -457,8 +478,12 @@ def starlink_v15_fcc() -> FacetModel:
                      "magnitude only). Everyday Astronaut claims ram-facing "
                      "but is not a primary SpaceX/FCC citation — vector left "
                      "empty.",
+        flight_attitude=ATT_LVLH,
     )
-    return b.build()
+    return b.build().set_look(
+        "bus -z", (0, 0, -1), attitude=ATT_LVLH,
+        notes="User phased-array face (Earth / nadir in LVLH-hold).",
+        status=STATUS_PUBLIC)
 
 
 def iss_nasa() -> FacetModel:
@@ -475,10 +500,13 @@ def iss_nasa() -> FacetModel:
         # 4 USOS wings of ~35×12 m per side → one 35×36 m photometric group.
         # 2 × 35 × 36 = 2,520 m² ≈ NASA 27,000 ft² / 2,500 m² class.
         b.panel((0, sign * 40, 4.5), (sign, 0, 0), (0, sign, 0), 35, 36,
-                CELLS, PANEL_BACK, f"arrays {tag}", gimbal=GIMBAL_2AXIS)
+                CELLS, PANEL_BACK, f"arrays {tag}", gimbal=GIMBAL_2AXIS,
+                gimbal_axis=(1, 0, 0), wrist_axis=(0, 1, 0),
+                travel_status=STATUS_TYPICAL)
         b.panel((0, sign * 14, 0), (0, sign, 0), (1, 0, 0), 22, 12,
                 WHITE_PAINT, WHITE_PAINT, f"radiators {tag}",
-                gimbal=GIMBAL_1AXIS, gimbal_axis=(0, 1, 0))
+                gimbal=GIMBAL_1AXIS, gimbal_axis=(0, 1, 0),
+                travel_status=STATUS_TYPICAL)
     b.meta(
         family_id="iss",
         sources=(
@@ -500,8 +528,75 @@ def iss_nasa() -> FacetModel:
         thrust_body=[[1.0, 0.0, 0.0]],
         thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_CHEMICAL,
         thrust_notes="ISS reboost is publicly along-track (+x in this frame).",
+        flight_attitude=ATT_LVLH,
     )
-    return b.build()
+    return b.build().set_look(
+        "radiator", None, attitude=ATT_LVLH,
+        notes="PVR/EATCS 1-axis about orbit-normal. Operational thermal "
+              "look schedule is unpublished — not invented.",
+        status=STATUS_UNKNOWN)
+
+
+def starlink_v2mini_fcc(dtc: bool = False) -> FacetModel:
+    """SATCAT Starlink v2 Mini from the cited FCC table.
+
+    Geometry matches `shapes.starlink_v2mini` (already FCC 4.1×2.7 /
+    4.1×12.8). Catalog copy adds explicit shoulder+wrist hinges, the
+    nadir user-face look, and the DTC look when tagged. Study LIBRARY
+    factory is not changed.
+    """
+    name = "starlink_v2mini_dtc" if dtc else "starlink_v2mini"
+    b = _Builder(name)
+    b.box((0, 0, 0), (4.1, 2.7, 0.2), MLI, "bus",
+          mats=[MLI, MLI, MLI, MLI, MLI, ANTENNA])
+    for sign, tag in [(1, "fore"), (-1, "aft")]:
+        cx = sign * (4.1 / 2 + 0.4 + 12.8 / 2)
+        b.panel((cx, 0, 0), (sign, 0, 0), (0, sign, 0), 12.8, 4.1, CELLS,
+                PANEL_BACK, f"array {tag}", gimbal=GIMBAL_2AXIS,
+                gimbal_axis=(1, 0, 0), wrist_axis=(0, 1, 0),
+                travel_status=STATUS_UNKNOWN)
+    if dtc:
+        cx = -(4.1 / 2 + 0.2 + 2.0 / 2)
+        b.panel((cx, 0, -0.4), (0, 1, 0), (1, 0, 0), 2.3, 2.0, ANTENNA, MLI,
+                "dtc antenna",
+                look_body=(0, 0, -1), look_attitude=ATT_LVLH,
+                look_notes="Press/observer Earth face; DTC size is a range, "
+                           "not a SpaceX drawing.",
+                look_status=STATUS_RANGE)
+    b.meta(
+        family_id=name,
+        sources=(
+            "Jonathan McDowell / SpaceX FCC Gen2: v2 Mini bus 4.1×2.7 m, "
+            "each array 4.1×12.8 m, mass ~800 kg "
+            "(https://planet4589.org/astro/starsim/index.html).",
+            "Spaceflight Now 2023-02-26: two wings, ~30 m tip-to-tip, "
+            "116 m² class surface area; shoulder + wrist (2-axis).",
+            "Mallama et al. arXiv:2306.06657 (photometric characterization).",
+            "Celestrak SATCAT tags some vehicles [DTC]; DTC panel size is an "
+            "observer-scale stand-in, not a SpaceX drawing.",
+            "SpaceX public: argon/krypton ion propulsion; thrust pointing "
+            "unpublished — left unknown. No Starshield internals.",
+        ),
+        notes="Two 2-axis arrays: shoulder +x, wrist +y from rest +z. "
+              "Travel unpublished (±π stand-in). DTC is a nadir-facing "
+              "deployable only when dtc=True. Study LIBRARY "
+              "`shapes.starlink_v2mini` is unchanged.",
+        dimension_status={
+            "bus": STATUS_PUBLIC, "arrays": STATUS_PUBLIC,
+            "array_gimbal": STATUS_PUBLIC,
+            "thrust_vector": STATUS_UNKNOWN,
+            **({"dtc_antenna": STATUS_RANGE} if dtc else {}),
+        },
+        thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_EP,
+        thrust_notes="Searched SpaceX Gen2 PDF, FCC table, SpaceNews "
+                     "(argon Hall 170 mN / 4.2 kW). No primary body-frame "
+                     "vs ram/nadir citation — vector left empty.",
+        flight_attitude=ATT_LVLH,
+    )
+    return b.build().set_look(
+        "bus -z", (0, 0, -1), attitude=ATT_LVLH,
+        notes="User phased-array face (Earth / nadir in LVLH-hold).",
+        status=STATUS_PUBLIC)
 
 
 def leo_box_wing() -> FacetModel:

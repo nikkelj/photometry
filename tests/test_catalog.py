@@ -14,9 +14,14 @@ from photometry.catalog import (
     snapshot_meta,
 )
 from photometry.shapes import (
+    ATT_LVLH,
+    ATT_NADIR,
+    CELLS,
     GIMBAL_1AXIS,
     GIMBAL_2AXIS,
     LIBRARY,
+    PANEL_BACK,
+    _Builder,
     iss as study_iss,
     starlink_v15 as study_starlink_v15,
     starlink_v2mini,
@@ -302,3 +307,141 @@ def test_surfaces_split_on_new_families():
 def test_unknown_family_raises():
     with pytest.raises(KeyError):
         family("not_a_real_family")
+
+
+def test_hinge_1axis_is_rotation_with_cosine_loss():
+    b = _Builder("hinge_1")
+    b.panel((0, 0, 0), (1, 0, 0), (0, 1, 0), 1.0, 1.0, CELLS, PANEL_BACK,
+            "array", gimbal=GIMBAL_1AXIS, gimbal_axis=(1, 0, 0))
+    m = b.build()
+    sun = unit(np.array([[0.80, 0.40, 0.45], [0.20, -0.60, 0.77]]))
+    n = m.body_normals(sun, articulate=True)
+    i = 0  # front
+    g = np.array([1.0, 0.0, 0.0])
+    assert np.allclose(n[i] @ g, 0, atol=1e-12)
+    for k, s in enumerate(sun):
+        s_perp = s - (s @ g) * g
+        s_perp = s_perp / np.linalg.norm(s_perp)
+        assert np.allclose(n[i, k], s_perp)
+        assert n[i, k] @ s < 0.999   # out-of-plane cosine loss
+        assert n[i, k] @ s > 0
+    rest = m.body_normals(sun, articulate=False)
+    assert np.allclose(rest[i], m.normals[i])
+
+
+def test_hinge_travel_clamped():
+    b = _Builder("clamp")
+    b.panel((0, 0, 0), (1, 0, 0), (0, 1, 0), 1.0, 1.0, CELLS, PANEL_BACK,
+            "array", gimbal=GIMBAL_1AXIS, gimbal_axis=(1, 0, 0),
+            travel=(-0.10, 0.10), travel_status="public")
+    m = b.build()
+    sun = unit(np.array([[0.0, 1.0, 0.05]]))  # wants ~90° about +x
+    th, ph = m.gimbal_angles(sun)
+    assert abs(th[0, 0]) <= 0.10 + 1e-12
+    assert np.allclose(ph[0], 0)
+    n = m.body_normals(sun)[0, 0]
+    # not free to snap to s_perp
+    g = np.array([1.0, 0.0, 0.0])
+    s_perp = sun[0] - (sun[0] @ g) * g
+    s_perp = s_perp / np.linalg.norm(s_perp)
+    assert np.linalg.norm(n - s_perp) > 0.2
+
+
+def test_two_axis_shoulder_then_wrist():
+    b = _Builder("two")
+    b.panel((0, 0, 0), (1, 0, 0), (0, 1, 0), 1.0, 1.0, CELLS, PANEL_BACK,
+            "array", gimbal=GIMBAL_2AXIS, gimbal_axis=(1, 0, 0),
+            wrist_axis=(0, 1, 0))
+    m = b.build()
+    sun = unit(np.array([[0.40, -0.50, 0.77], [0.90, 0.10, 0.42]]))
+    n = m.body_normals(sun)
+    assert np.allclose(n[0], sun)          # unlimited 2-axis reaches the sun
+    # wrist locked → same as 1-axis about the shoulder
+    b1 = _Builder("locked")
+    b1.panel((0, 0, 0), (1, 0, 0), (0, 1, 0), 1.0, 1.0, CELLS, PANEL_BACK,
+             "array", gimbal=GIMBAL_2AXIS, gimbal_axis=(1, 0, 0),
+             wrist_axis=(0, 1, 0), wrist_travel=(0.0, 0.0))
+    locked = b1.build()
+    n_lock = locked.body_normals(sun)
+    g = np.array([1.0, 0.0, 0.0])
+    assert np.allclose(n_lock[0] @ g, 0, atol=1e-12)
+    assert np.all(np.einsum("kj,kj->k", n_lock[0], sun) < 0.999)
+
+
+def test_fixed_arrays_stay_at_rest():
+    bw = family("bluewalker3")
+    assert not bw.articulated
+    sun = unit(np.array([[0.3, 0.4, 0.86]]))
+    n = bw.body_normals(sun, articulate=True)
+    assert np.allclose(n[:, 0, :], bw.normals)
+
+
+def test_study_library_articulation_numerically_stable():
+    """Unlimited hinge path matches the old sun-track formulas on LIBRARY."""
+    sun = unit(np.array([[0.4, -0.5, 0.77], [0.9, 0.1, 0.42]]))
+    m1 = study_starlink_v15()
+    n = m1.body_normals(sun, articulate=True)
+    for i in range(m1.n_facets):
+        if m1.gimbal_mode[i] != GIMBAL_1AXIS or m1.mirror_of[i] >= 0:
+            continue
+        g = m1.gimbal_axis[i]
+        s_perp = sun - np.outer(sun @ g, g)
+        s_perp = s_perp / np.linalg.norm(s_perp, axis=-1, keepdims=True)
+        assert np.allclose(n[i], s_perp)
+    m2 = starlink_v2mini()
+    n2 = m2.body_normals(sun, articulate=True)
+    for i in range(m2.n_facets):
+        if m2.gimbal_mode[i] == GIMBAL_2AXIS and m2.mirror_of[i] < 0:
+            assert np.allclose(n2[i], sun)
+
+
+def test_deployable_look_vs_flight_attitude():
+    cap = family("capella")
+    i = next(j for j, lab in enumerate(cap.labels)
+             if "sar" in lab.lower() and cap.mirror_of[j] < 0)
+    assert np.allclose(cap.look_body[i], [0, 0, -1])
+    assert cap.look_attitude[i] == ATT_NADIR
+    assert cap.look_status[i] == "public"
+    ice = family("iceye")
+    i = next(j for j, lab in enumerate(ice.labels)
+             if "sar" in lab.lower() and ice.mirror_of[j] < 0)
+    assert ice.look_status[i] == "unknown"
+    assert np.allclose(ice.look_body[i], 0)
+    geo = family("geo_bus")
+    i = next(j for j, lab in enumerate(geo.labels)
+             if "dish" in lab.lower() and geo.mirror_of[j] < 0)
+    assert np.allclose(geo.look_body[i], [0, 0, -1])
+    assert geo.look_status[i] == "typical_class"
+    dtc = family("starlink_v2mini_dtc")
+    i = next(j for j, lab in enumerate(dtc.labels)
+             if "dtc" in lab.lower() and dtc.mirror_of[j] < 0)
+    assert np.allclose(dtc.look_body[i], [0, 0, -1])
+    v15 = family("starlink_v15")
+    i = next(j for j, lab in enumerate(v15.labels)
+             if "bus -z" in lab.lower())
+    assert np.allclose(v15.look_body[i], [0, 0, -1])
+    assert v15.flight_attitude == ATT_LVLH
+    um = family("umbra")
+    i = next(j for j, lab in enumerate(um.labels)
+             if "sar" in lab.lower() and um.mirror_of[j] < 0)
+    assert um.look_status[i] == "unknown"
+
+
+def test_high_count_surfaces_complete():
+    for fid in ("starlink_v15", "starlink_v2mini", "starlink_v2mini_dtc",
+                "oneweb", "kuiper", "geo_bus", "iss", "iceye", "capella",
+                "umbra"):
+        m = family(fid)
+        assert all(m.material_class), fid
+        assert np.all(np.isfinite(m.rho_d)) and np.all(np.isfinite(m.k_s))
+        assert np.all(np.isnan(m.alpha_ir))
+        assert all(p == "unknown" for p in m.ir_provenance)
+        fronts = [i for i, lab in enumerate(m.labels)
+                  if "array" in lab.lower() and "front" in lab.lower()
+                  and m.mirror_of[i] < 0]
+        backs = [i for i, lab in enumerate(m.labels)
+                 if "array" in lab.lower() and "back" in lab.lower()]
+        if fronts:
+            assert all(m.material_class[i] == "CELLS" for i in fronts), fid
+        if backs:
+            assert all(m.material_class[i] == "PANEL_BACK" for i in backs), fid

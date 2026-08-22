@@ -7,9 +7,11 @@ existing forward model already consumes (`rho_d`, `k_s`, `n_ph`, gimbals).
 
 The 620 km study-orbit library (`photometry.shapes.LIBRARY`) is **unchanged**
 so fleet identification numbers stay reproducible. Catalog SATCAT mapping
-for Starlink v1.5 and ISS uses the cited FCC / NASA areas (see those
-rows); `shapes.starlink_v15()` / `shapes.iss()` keep the study meshes.
-New families live in `photometry.catalog.FAMILIES`.
+uses higher-fidelity stand-ins for Starlink v1.5 / v2 Mini / ISS (FCC /
+NASA areas, explicit hinges, documented looks); the study factories
+`shapes.starlink_v15()` / `shapes.starlink_v2mini()` / `shapes.iss()` keep
+the study meshes. Articulation is the same `body_normals` path (extended
+hinge, not a second articulator).
 
 ```python
 from photometry.catalog import family, resolve, coverage_report
@@ -30,10 +32,16 @@ python -m pytest tests/test_catalog.py tests/test_basics.py
 ## Schema (what a family must carry)
 
 1. **Bus** — box or cylinder facets.
-2. **Solar arrays** with an explicit gimbal: `GIMBAL_FIXED` / `GIMBAL_1AXIS` /
-   `GIMBAL_2AXIS`. BlueWalker-class sheets stay fixed.
+2. **Solar arrays** with a real hinge, not a free sun-chasing normal:
+   `GIMBAL_FIXED` (rest pose), `GIMBAL_1AXIS` (Rodrigues about `gimbal_axis`
+   from rest; out-of-plane cosine loss remains; travel clamped when public),
+   `GIMBAL_2AXIS` (shoulder then wrist). BlueWalker-class sheets stay fixed.
+   Travel defaults to ±π when unpublished so study LIBRARY sun-track cases
+   stay numerically the same.
 3. **Deployables** when they are photometrically large and public (DTC panel,
-   ICEYE 3.2×0.4 m SAR, GEO nadir dish, ISS radiators).
+   ICEYE 3.2×0.4 m SAR, GEO nadir dish, ISS radiators), with a documented
+   **look** vector vs the nominal flight attitude (`lvlh` / `nadir` /
+   `yaw_steering`). Unpublished looks stay `unknown` — not invented.
 4. **Thrust vs nominal flight attitude.** Body-frame unit vector(s) when
    public (ISS reboost = `+x` in LVLH). Empty array + `thrust_notes` when
    pointing is unpublished — **Hall thruster pointing is never guessed**.
@@ -257,3 +265,26 @@ Mapped this pass with public stage dims: `IABS R/B` (9; 2.9×0.68 m disc),
 
 Estimator, sensing FOV, and ADCS tracker geometry are not part of this
 catalog.
+
+## Articulation / look (this fidelity pass)
+
+`body_normals` rotates each rest normal about the stored hinge (1-axis)
+or shoulder then wrist (2-axis). It is the same articulator the study
+path already called — not a second implementation. Travel is ±π unless a
+public stop exists (none of the high-count families publish a degree
+limit; ISS alpha/beta are treated as continuous `typical_class`).
+
+Documented aperture looks (body frame vs flight attitude):
+
+| family | aperture | look | vs | status |
+|---|---|---|---|---|
+| Starlink v1.5 / v2 Mini | bus −z user array | [0,0,−1] | lvlh | public |
+| Starlink DTC | DTC panel | [0,0,−1] | lvlh | range |
+| OneWeb / Kuiper | bus −z | [0,0,−1] | lvlh | typical_class |
+| GEO bus | nadir dish | [0,0,−1] | nadir | typical_class |
+| Capella | SAR mesh | [0,0,−1] | nadir | public (FCC ODAR) |
+| ICEYE / Umbra | SAR | — | — | **unknown** (side-look / unpublished) |
+| ISS radiators | PVR/EATCS | — | lvlh | **unknown** (thermal schedule) |
+
+Hall / ion thrust vectors are still empty. No primary ram/nadir/aft
+citation was found for Starlink, OneWeb, or Kuiper.

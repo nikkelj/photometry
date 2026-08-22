@@ -9,13 +9,17 @@ material classes are what the forward model consumes.
 Body-frame convention for all library models (matches LVLH-hold attitude):
     +x along-track (velocity), +y cross-track (orbit normal), +z zenith.
 
-Articulation: each facet carries a gimbal mode —
-  GIMBAL_FIXED   normal fixed in the body frame
-  GIMBAL_1AXIS   normal rotates about `gimbal_axis` to chase the sun
-                 (cosine losses out-of-plane remain)
-  GIMBAL_2AXIS   normal points at the sun exactly (shoulder + wrist)
-A facet with mirror_of >= 0 is the back side of another facet and always
-carries the opposite of its partner's current normal.
+Articulation is a hinge mechanism, not a free sun-chasing normal:
+  GIMBAL_FIXED   rest normal stays in the body frame
+  GIMBAL_1AXIS   rest normal rotates about `gimbal_axis` (the hinge);
+                 out-of-plane cosine loss remains; travel clamped if set
+  GIMBAL_2AXIS   shoulder (`gimbal_axis`) then wrist (`wrist_axis`);
+                 each axis is a real rotation from rest, then clamped
+`normals` are the rest pose. `body_normals` applies Rodrigues rotations
+about those hinges. A facet with mirror_of >= 0 is the back side of
+another facet and always carries the opposite of its partner's current
+normal. Travel defaults to ±π (unpublished / unlimited) so existing
+study LIBRARY sun-track cases stay numerically the same.
 
 Catalog extensions (optional; unused by the 620 km study forward model):
   per-facet material class + IR α/ε (NaN = unknown), body-frame thrust
@@ -30,6 +34,10 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from .frames import unit
+
+
+def _fmt_vec(v) -> str:
+    return "[" + ",".join(f"{float(x):.3f}" for x in v) + "]"
 
 GIMBAL_FIXED = 0
 GIMBAL_1AXIS = 1
@@ -77,14 +85,40 @@ STATUS_UNCERTAIN = "uncertain"
 STATUS_UNKNOWN = "unknown"
 STATUS_TYPICAL = "typical_class"  # class convention, not this spacecraft
 
+# Unpublished / unlimited SADA travel. Public limits replace these.
+TRAVEL_FULL = np.pi
+
+
+def _rotate_about(v: np.ndarray, axis: np.ndarray, ang: np.ndarray) -> np.ndarray:
+    """Rodrigues: rotate rest vector `v` (3,) about unit `axis` by `ang` (K,)."""
+    ang = np.atleast_1d(np.asarray(ang, dtype=float))
+    axis = unit(np.asarray(axis, dtype=float))
+    vv = np.broadcast_to(np.asarray(v, dtype=float), (ang.shape[0], 3))
+    c = np.cos(ang)[:, None]
+    s = np.sin(ang)[:, None]
+    return (vv * c
+            + np.cross(np.broadcast_to(axis, vv.shape), vv) * s
+            + axis * (vv @ axis)[:, None] * (1.0 - c))
+
+
+def _hinge_angle(n0: np.ndarray, axis: np.ndarray, sun: np.ndarray) -> np.ndarray:
+    """Rotation about `axis` from rest `n0` that maximises n·sun (K,)."""
+    n_perp = n0 - (n0 @ axis) * axis
+    crossed = np.cross(axis, n0)
+    return np.arctan2(sun @ crossed, sun @ n_perp)
+
+
+def _clamp_travel(ang: np.ndarray, lo: float, hi: float) -> np.ndarray:
+    return np.clip(np.asarray(ang, dtype=float), lo, hi)
+
 
 @dataclass
 class FacetModel:
     """Facet model in the target body frame.
 
-    normals are the *rest* normals; `body_normals` evaluates articulation.
-    polygons: drawable (vertices (V,3), facet_index) pairs for rendering —
-    the movie/truth-visualization layer only, never the photometry.
+    normals are the *rest* pose; `body_normals` rotates them about the
+    hinge(s). polygons: drawable (vertices (V,3), facet_index) pairs for
+    rendering — the movie/truth-visualization layer only, never the photometry.
     """
 
     normals: np.ndarray
@@ -94,7 +128,19 @@ class FacetModel:
     n_ph: np.ndarray
     labels: list[str]
     gimbal_mode: np.ndarray = None
-    gimbal_axis: np.ndarray = None
+    gimbal_axis: np.ndarray = None          # 1-axis hinge / 2-axis shoulder
+    wrist_axis: np.ndarray = None           # 2-axis wrist at rest (body frame)
+    travel_min: np.ndarray = None           # rad about gimbal_axis, rest = 0
+    travel_max: np.ndarray = None
+    wrist_travel_min: np.ndarray = None
+    wrist_travel_max: np.ndarray = None
+    travel_status: list[str] = field(default_factory=list)
+    # documented aperture look at nominal flight attitude; 0 = none / unknown
+    look_body: np.ndarray = None
+    look_attitude: list[str] = field(default_factory=list)
+    look_notes: list[str] = field(default_factory=list)
+    look_status: list[str] = field(default_factory=list)
+    flight_attitude: str = ATT_UNKNOWN
     mirror_of: np.ndarray = None
     polygons: list = field(default_factory=list)
     name: str = "unnamed"
@@ -120,6 +166,41 @@ class FacetModel:
             self.gimbal_mode = np.zeros(f, dtype=int)
         if self.gimbal_axis is None:
             self.gimbal_axis = np.tile([1.0, 0.0, 0.0], (f, 1))
+        if self.travel_min is None:
+            self.travel_min = np.full(f, -TRAVEL_FULL)
+        if self.travel_max is None:
+            self.travel_max = np.full(f, TRAVEL_FULL)
+        if self.wrist_travel_min is None:
+            self.wrist_travel_min = np.full(f, -TRAVEL_FULL)
+        if self.wrist_travel_max is None:
+            self.wrist_travel_max = np.full(f, TRAVEL_FULL)
+        if self.wrist_axis is None:
+            self.wrist_axis = np.zeros((f, 3))
+        for i in range(f):
+            if np.linalg.norm(self.wrist_axis[i]) < 1e-12:
+                w = np.cross(self.gimbal_axis[i], self.normals[i])
+                nrm = np.linalg.norm(w)
+                if nrm > 1e-12:
+                    self.wrist_axis[i] = w / nrm
+                else:
+                    tmp = (np.array([0.0, 0.0, 1.0])
+                           if abs(self.gimbal_axis[i, 2]) < 0.9
+                           else np.array([0.0, 1.0, 0.0]))
+                    self.wrist_axis[i] = unit(np.cross(self.gimbal_axis[i], tmp))
+        if len(self.travel_status) != f:
+            self.travel_status = list(self.travel_status) + ["unknown"] * (
+                f - len(self.travel_status))
+        if self.look_body is None:
+            self.look_body = np.zeros((f, 3))
+        if len(self.look_attitude) != f:
+            self.look_attitude = list(self.look_attitude) + [""] * (
+                f - len(self.look_attitude))
+        if len(self.look_notes) != f:
+            self.look_notes = list(self.look_notes) + [""] * (
+                f - len(self.look_notes))
+        if len(self.look_status) != f:
+            self.look_status = list(self.look_status) + [""] * (
+                f - len(self.look_status))
         if self.mirror_of is None:
             self.mirror_of = np.full(f, -1, dtype=int)
         if self.alpha_ir is None:
@@ -151,28 +232,89 @@ class FacetModel:
     def diffuse_albedo_area(self) -> np.ndarray:
         return self.rho_d * self.areas
 
+    def gimbal_angles(self, u_sun_body: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Shoulder and wrist angles (F,K) from rest that track `u_sun_body`.
+
+        1-axis: wrist column is 0. Fixed: both 0. Angles are clamped to travel.
+        """
+        sun = np.asarray(u_sun_body, dtype=float)
+        k = len(sun)
+        th = np.zeros((self.n_facets, k))
+        ph = np.zeros((self.n_facets, k))
+        for i in range(self.n_facets):
+            if self.mirror_of[i] >= 0 or self.gimbal_mode[i] == GIMBAL_FIXED:
+                continue
+            n0 = self.normals[i]
+            g = self.gimbal_axis[i]
+            th[i] = _clamp_travel(
+                _hinge_angle(n0, g, sun),
+                float(self.travel_min[i]), float(self.travel_max[i]))
+            if self.gimbal_mode[i] == GIMBAL_2AXIS:
+                n1 = _rotate_about(n0, g, th[i])
+                w1 = _rotate_about(self.wrist_axis[i], g, th[i])
+                ph_i = np.empty(k)
+                for j in range(k):
+                    ph_i[j] = _hinge_angle(n1[j], w1[j], sun[j:j + 1])[0]
+                ph[i] = _clamp_travel(
+                    ph_i, float(self.wrist_travel_min[i]),
+                    float(self.wrist_travel_max[i]))
+        return th, ph
+
     def body_normals(self, u_sun_body: np.ndarray,
                      articulate: bool = True) -> np.ndarray:
-        """Facet normals (F,K,3) for K sun directions in the body frame."""
-        k = len(u_sun_body)
+        """Facet normals (F,K,3) for K sun directions in the body frame.
+
+        1-axis rotates the rest normal about `gimbal_axis` (out-of-plane
+        cosine loss remains). 2-axis is shoulder then wrist. Fixed stays
+        at rest. Mirror facets follow the partner.
+        """
+        sun = np.asarray(u_sun_body, dtype=float)
+        k = len(sun)
         n = np.repeat(self.normals[:, None, :], k, axis=1)
         if not (articulate and self.articulated):
             return n
+        th, ph = self.gimbal_angles(sun)
         for i in range(self.n_facets):
-            if self.mirror_of[i] >= 0:
+            if self.mirror_of[i] >= 0 or self.gimbal_mode[i] == GIMBAL_FIXED:
                 continue
-            if self.gimbal_mode[i] == GIMBAL_2AXIS:
-                n[i] = u_sun_body
-            elif self.gimbal_mode[i] == GIMBAL_1AXIS:
-                g = self.gimbal_axis[i]
-                s_perp = u_sun_body - np.outer(u_sun_body @ g, g)
-                nrm = np.linalg.norm(s_perp, axis=-1, keepdims=True)
-                ok = nrm[:, 0] > 1e-9
-                n[i, ok] = s_perp[ok] / nrm[ok]
+            n0 = self.normals[i]
+            g = self.gimbal_axis[i]
+            n1 = _rotate_about(n0, g, th[i])
+            if self.gimbal_mode[i] == GIMBAL_1AXIS:
+                n[i] = n1
+                continue
+            w1 = _rotate_about(self.wrist_axis[i], g, th[i])
+            n2 = np.empty_like(n1)
+            for j in range(k):
+                n2[j] = _rotate_about(n1[j], w1[j], np.array([ph[i, j]]))[0]
+            n[i] = n2
         for i in range(self.n_facets):
             if self.mirror_of[i] >= 0:
                 n[i] = -n[self.mirror_of[i]]
         return n
+
+    def set_look(self, match: str, body=None, *, attitude: str = "",
+                 notes: str = "", status: str = STATUS_UNKNOWN) -> "FacetModel":
+        """Tag front facets whose label contains `match` with a documented look.
+
+        `body` is a unit vector in the body frame at `flight_attitude`.
+        Omit `body` (or pass None) when the operational look is unpublished.
+        """
+        vec = np.zeros(3) if body is None else np.asarray(body, dtype=float)
+        if body is not None and np.linalg.norm(vec) > 1e-12:
+            vec = unit(vec)
+        else:
+            vec = np.zeros(3)
+            if body is None:
+                status = status or STATUS_UNKNOWN
+        key = match.lower()
+        for i, lab in enumerate(self.labels):
+            if key in lab.lower() and self.mirror_of[i] < 0:
+                self.look_body[i] = vec
+                self.look_attitude[i] = attitude
+                self.look_notes[i] = notes
+                self.look_status[i] = status
+        return self
 
     def characteristic_radius(self) -> float:
         """Rough size scale (m) from drawable geometry, for rendering."""
@@ -211,9 +353,34 @@ class FacetModel:
             gmodes = sorted({self.gimbal_name(i) for i in fronts})
             mats = sorted({self.material_class[i] for i in idxs})
             area = float(sum(self.areas[i] for i in fronts))
+            extra = []
+            art = [i for i in fronts if self.gimbal_mode[i] != GIMBAL_FIXED]
+            if art:
+                i0 = art[0]
+                extra.append(
+                    f"hinge {_fmt_vec(self.gimbal_axis[i0])} rest "
+                    f"{_fmt_vec(self.normals[i0])} travel "
+                    f"[{self.travel_min[i0]:.2f},{self.travel_max[i0]:.2f}] "
+                    f"rad ({self.travel_status[i0]})")
+                if self.gimbal_mode[i0] == GIMBAL_2AXIS:
+                    extra.append(f"wrist {_fmt_vec(self.wrist_axis[i0])}")
+            looks = [i for i in fronts if self.look_status[i]]
+            if looks:
+                i0 = looks[0]
+                if np.linalg.norm(self.look_body[i0]) > 1e-12:
+                    extra.append(
+                        f"look {_fmt_vec(self.look_body[i0])} vs "
+                        f"{self.look_attitude[i0] or self.flight_attitude} "
+                        f"({self.look_status[i0]})")
+                else:
+                    extra.append(f"look {STATUS_UNKNOWN} ({self.look_status[i0]})")
+            tail = ("; " + "; ".join(extra)) if extra else ""
             lines.append(
                 f"  {role}: {len(fronts)} front facets, {area:.2f} m^2, "
-                f"gimbal {','.join(gmodes)}, materials {','.join(mats)}")
+                f"gimbal {','.join(gmodes)}, materials {','.join(mats)}"
+                f"{tail}")
+        if self.flight_attitude and self.flight_attitude != ATT_UNKNOWN:
+            lines.append(f"  flight attitude: {self.flight_attitude}")
         if len(self.thrust_body) == 0:
             lines.append(
                 f"  thrust: pointing {STATUS_UNKNOWN}; "
@@ -252,6 +419,9 @@ class _Builder:
         self.rho_d, self.k_s, self.n_ph = [], [], []
         self.labels = []
         self.gmode, self.gaxis, self.mirror = [], [], []
+        self.waxis, self.tmin, self.tmax = [], [], []
+        self.wtmin, self.wtmax, self.tstatus = [], [], []
+        self.look, self.look_att, self.look_notes_l, self.look_stat = [], [], [], []
         self.polygons = []
         self.material_class, self.optical_prov, self.ir_prov = [], [], []
         self.alpha_ir, self.epsilon_ir = [], []
@@ -263,12 +433,14 @@ class _Builder:
         self.thrust_attitude = ATT_UNKNOWN
         self.thrust_propulsion = PROP_UNKNOWN
         self.thrust_notes = ""
+        self.flight_attitude = ATT_UNKNOWN
 
     def meta(self, *, family_id: str | None = None, sources=(), notes: str = "",
              dimension_status: dict | None = None, thrust_body=None,
              thrust_attitude: str = ATT_UNKNOWN,
              thrust_propulsion: str = PROP_UNKNOWN,
-             thrust_notes: str = "") -> "_Builder":
+             thrust_notes: str = "",
+             flight_attitude: str | None = None) -> "_Builder":
         if family_id is not None:
             self.family_id = family_id
         self.sources = tuple(sources)
@@ -284,6 +456,10 @@ class _Builder:
         self.thrust_attitude = thrust_attitude
         self.thrust_propulsion = thrust_propulsion
         self.thrust_notes = thrust_notes
+        if flight_attitude is not None:
+            self.flight_attitude = flight_attitude
+        elif thrust_attitude and thrust_attitude != ATT_UNKNOWN:
+            self.flight_attitude = thrust_attitude
         return self
 
     def facet(self, normal, area, mat, label, gimbal=GIMBAL_FIXED,
@@ -291,7 +467,11 @@ class _Builder:
               material_class: str | None = None,
               optical_provenance: str = "assumed",
               alpha_ir: float | None = None, epsilon_ir: float | None = None,
-              ir_provenance: str = "unknown") -> int:
+              ir_provenance: str = "unknown",
+              wrist_axis=None, travel=None, wrist_travel=None,
+              travel_status: str = "unknown",
+              look_body=None, look_attitude: str = "",
+              look_notes: str = "", look_status: str = "") -> int:
         i = len(self.areas)
         self.normals.append(unit(np.asarray(normal, dtype=float)))
         self.areas.append(float(area))
@@ -302,6 +482,26 @@ class _Builder:
         self.labels.append(label)
         self.gmode.append(gimbal)
         self.gaxis.append(unit(np.asarray(gimbal_axis, dtype=float)))
+        if wrist_axis is None:
+            self.waxis.append(np.zeros(3))
+        else:
+            self.waxis.append(unit(np.asarray(wrist_axis, dtype=float)))
+        tlo, thi = travel if travel is not None else (-TRAVEL_FULL, TRAVEL_FULL)
+        self.tmin.append(float(tlo))
+        self.tmax.append(float(thi))
+        wtlo, wthi = (wrist_travel if wrist_travel is not None
+                      else (-TRAVEL_FULL, TRAVEL_FULL))
+        self.wtmin.append(float(wtlo))
+        self.wtmax.append(float(wthi))
+        self.tstatus.append(travel_status)
+        if look_body is None:
+            self.look.append(np.zeros(3))
+        else:
+            lb = np.asarray(look_body, dtype=float)
+            self.look.append(unit(lb) if np.linalg.norm(lb) > 1e-12 else lb)
+        self.look_att.append(look_attitude)
+        self.look_notes_l.append(look_notes)
+        self.look_stat.append(look_status)
         self.mirror.append(mirror_of)
         cls = material_class or PRESET_CLASS.get(tup, PRESET_CLASS.get(mat, "custom"))
         self.material_class.append(cls)
@@ -335,7 +535,11 @@ class _Builder:
                 k += 1
 
     def panel(self, center, u_dir, v_dir, w, h, front_mat, back_mat,
-              label, gimbal=GIMBAL_FIXED, gimbal_axis=(1, 0, 0)) -> None:
+              label, gimbal=GIMBAL_FIXED, gimbal_axis=(1, 0, 0),
+              wrist_axis=None, travel=None, wrist_travel=None,
+              travel_status: str = "unknown",
+              look_body=None, look_attitude: str = "",
+              look_notes: str = "", look_status: str = "") -> None:
         """Two-sided flat panel; front normal = u_dir x v_dir."""
         c = np.asarray(center, dtype=float)
         u = unit(np.asarray(u_dir, dtype=float)) * (w / 2)
@@ -343,9 +547,14 @@ class _Builder:
         n = unit(np.cross(u, v))
         poly = [c + u + v, c - u + v, c - u - v, c + u - v]
         i_front = self.facet(n, w * h, front_mat, f"{label} front", gimbal,
-                             gimbal_axis, polygon=poly)
+                             gimbal_axis, polygon=poly, wrist_axis=wrist_axis,
+                             travel=travel, wrist_travel=wrist_travel,
+                             travel_status=travel_status,
+                             look_body=look_body, look_attitude=look_attitude,
+                             look_notes=look_notes, look_status=look_status)
         self.facet(-n, w * h, back_mat, f"{label} back", gimbal, gimbal_axis,
-                   mirror_of=i_front)
+                   mirror_of=i_front, wrist_axis=wrist_axis, travel=travel,
+                   wrist_travel=wrist_travel, travel_status=travel_status)
 
     def prism(self, center, axis_dir, length, diameter, n_side, side_mat,
               cap_mats, label) -> None:
@@ -383,6 +592,17 @@ class _Builder:
             labels=self.labels,
             gimbal_mode=np.array(self.gmode, dtype=int),
             gimbal_axis=np.array(self.gaxis),
+            wrist_axis=np.array(self.waxis) if self.waxis else None,
+            travel_min=np.array(self.tmin) if self.tmin else None,
+            travel_max=np.array(self.tmax) if self.tmax else None,
+            wrist_travel_min=np.array(self.wtmin) if self.wtmin else None,
+            wrist_travel_max=np.array(self.wtmax) if self.wtmax else None,
+            travel_status=list(self.tstatus),
+            look_body=np.array(self.look) if self.look else None,
+            look_attitude=list(self.look_att),
+            look_notes=list(self.look_notes_l),
+            look_status=list(self.look_stat),
+            flight_attitude=self.flight_attitude,
             mirror_of=np.array(self.mirror, dtype=int),
             polygons=self.polygons,
             name=self.name,

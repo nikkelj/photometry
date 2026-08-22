@@ -76,8 +76,12 @@ def capella() -> FacetModel:
                           "arrays": STATUS_PUBLIC, "thrust_vector": STATUS_UNKNOWN},
         thrust_attitude=ATT_NADIR, thrust_propulsion=PROP_UNKNOWN,
         thrust_notes="ODAR lists a thruster mass; body-frame pointing not given.",
+        flight_attitude=ATT_NADIR,
     )
-    return b.build()
+    return b.build().set_look(
+        "sar", (0, 0, -1), attitude=ATT_NADIR,
+        notes="FCC ODAR: arrays radial, SAR nadir.",
+        status=STATUS_PUBLIC)
 
 
 def umbra() -> FacetModel:
@@ -103,8 +107,12 @@ def umbra() -> FacetModel:
                           "thrust_vector": STATUS_UNKNOWN},
         thrust_attitude=ATT_NADIR, thrust_propulsion=PROP_UNKNOWN,
         thrust_notes="Propulsion/pointing not used as a public number.",
+        flight_attitude=ATT_NADIR,
     )
-    return b.build()
+    return b.build().set_look(
+        "sar", None, attitude=ATT_NADIR,
+        notes="Centre-fed mesh; operational look angle unpublished — not invented.",
+        status=STATUS_UNKNOWN)
 
 
 def hawkeye360() -> FacetModel:

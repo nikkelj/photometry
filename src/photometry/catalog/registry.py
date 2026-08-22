@@ -101,6 +101,8 @@ FAMILIES: dict[str, Callable[[], FacetModel]] = {
 # uses the FCC / NASA numbers for the two families that dominate LEO
 # photometry (v1.5 array chord and ISS array area).
 FAMILIES["starlink_v15"] = _fam.starlink_v15_fcc
+FAMILIES["starlink_v2mini"] = lambda: _fam.starlink_v2mini_fcc(False)
+FAMILIES["starlink_v2mini_dtc"] = lambda: _fam.starlink_v2mini_fcc(True)
 FAMILIES["iss"] = _fam.iss_nasa
 
 
