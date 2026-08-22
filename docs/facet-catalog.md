@@ -151,6 +151,8 @@ Cited stage maps already in: IABS 2.9×0.68 m, H-3 5.27×12 m, SL-11 →
 - ICEYE / Umbra SAR look; ISS radiator thermal schedule.
 - Array 1- vs 2-axis when the public record is silent (called out as a
   stand-in).
+- **Starlink visor / mitigation mesh** — public as practices, not as
+  cited size or angle vs LVLH (see below). No `mitigated=` state.
 
 Estimator, sensing FOV, and ADCS tracker geometry are not part of this
 catalog.
@@ -183,9 +185,34 @@ locks an **order-of-magnitude** check at two public geometries (not a fit):
 
 The Lambert–Phong CELLS/MLI presets and FCC areas are a bit bright vs
 those papers (about 1–2 mag). That is expected and is **not** retuned to
-match. A 90° zenith + ram-sun geometry is edge-on for these flats and
-correctly goes dark; Mallama’s 90° phase-function minimum is a sky
-average, not that one pose.
+match. The gap is visors / mitigation attitude / assumed materials — not
+an area error.
+
+`tests/test_catalog.py::test_starlink_90deg_zenith_ram_is_edge_on_dark`
+locks the unmitigated geometric dark pose: 90° zenith + ram-sun is
+edge-on for these flats and flux goes to the radiometry clip. Mallama’s
+90° phase-function minimum is a sky average, not that one pose.
+
+## Brightness mitigation (honest no — not meshed)
+
+Investigated SpaceX FCC / brightness reports and Mallama papers. Public
+mitigations exist; **none have a cited visor size or deploy angle vs
+LVLH** that would justify a new deployable. Prefer no mesh over a
+decorative visor. No `mitigated=True` flag. CELLS/MLI were not retuned.
+
+| practice | what is public | why not a catalog facet / state |
+|---|---|---|
+| DarkSat coating (2020, one vehicle) | low-albedo paint; abandoned (thermal) | coating, not geometry; abandoned |
+| VisorSat sunshade | SpaceX: RF-transparent deployable that “lays flat on the chassis” and blocks the nadir antennas ([best-practices PDF](https://www.starlink.com/public-files/BrightnessMitigationBestPracticesSatelliteOperators.pdf); Spaceflight Now 2020-04-28). Mallama [arXiv:2309.14152](https://arxiv.org/abs/2309.14152): shade reduced luminosity ~×3, then dropped because it blocked lasers and added drag. | **no published length, width, fold, or body-frame angle.** Cole 2020 21° panel tilt is a photometric *fit*, not a SpaceX drawing. |
+| Dielectric mirror film (Post-VisorSat, v2 Mini nadir) | SpaceX: Bragg film on the bottom face; gen-2 film “10×” vs gen-1 on a BRDF *chart*. Mallama: intermediate brightness between Original and VisorSat. | coating on the existing `bus -z` facet, not a deployable. Chart is not a tabulated BRDF we can put on `ANTENNA` without guessing. |
+| Dark array backing / black paint | SpaceX: dark-red inter-cell pigment (v1); opaque backsheet + “Low Reflectivity Black” on complex parts (v2) | materials, not OML. Not copied onto CELLS/MLI. |
+| Knife-edge roll (orbit-raise) | SpaceX / Mallama [arXiv:2303.01431](https://arxiv.org/abs/2303.01431): roll so the Sun lies in the plane of the flats; ~×10 dimmer in early mission. | flight **attitude**, not a deployable. No published roll angle in degrees. |
+| Terminator tracking (v2 Mini on-station) | SpaceX: arrays off-point so the knife-edge aims at the Earth limb near the terminator (25% power cost). Mallama [arXiv:2306.06657](https://arxiv.org/abs/2306.06657): on-station 1000-km mean 7.87 vs early-orbit 5.08. | array **conops**, not a visor. No published gimbal travel. Modeling it would invent angles. |
+
+Catalog Starlink families stay the unmitigated FCC stand-in (LVLH-hold,
+sun-tracking arrays). That is why 72°/550 km is ~1–2 mag brighter than
+Mallama’s on-station / VisorSat numbers. Hall pointing and IR α/ε stay
+unknown.
 
 ## Mapping pitfalls
 

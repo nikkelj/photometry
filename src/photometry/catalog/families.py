@@ -463,12 +463,18 @@ def starlink_v15_fcc() -> FacetModel:
             "Spaceflight Now 2023-02-26: single ~11 m end-to-end wing on v1.5.",
             "SpaceX public: krypton/argon ion (Hall-class) propulsion; "
             "body-frame thrust pointing is not published — left unknown.",
+            "SpaceX Brightness Mitigation Best Practices PDF: VisorSat "
+            "shade (no published size/angle), later dielectric film on "
+            "the nadir face, knife-edge / terminator-tracking conops. "
+            "Mallama et al. arXiv:2309.14152. Not meshed — no cited "
+            "visor CAD or published gimbal angles.",
         ),
         notes="FCC table (catalog). Study LIBRARY `shapes.starlink_v15` "
               "keeps the earlier 1.4 / 2.7 m stand-in so 620 km inversion "
               "stays reproducible. v1.0 lumped with v1.5. 1-axis shoulder "
               "gimbal. Nadir (−z) is the antenna panel. Cells vs panel-back "
-              "split. Do not treat as Starshield CAD.",
+              "split. Do not treat as Starshield CAD. Visor / film / "
+              "knife-edge are public practices, not meshable geometry.",
         dimension_status={"bus": STATUS_PUBLIC, "array": STATUS_PUBLIC,
                           "array_gimbal": STATUS_PUBLIC,
                           "thrust_vector": STATUS_UNKNOWN},
@@ -576,11 +582,18 @@ def starlink_v2mini_fcc(dtc: bool = False) -> FacetModel:
             "observer-scale stand-in, not a SpaceX drawing.",
             "SpaceX public: argon/krypton ion propulsion; thrust pointing "
             "unpublished — left unknown. No Starshield internals.",
+            "SpaceX Brightness Mitigation Best Practices / Gen2 PDF: no "
+            "visor on Mini; nadir dielectric film + terminator-tracking "
+            "array off-point (knife-edge to Earth limb). Mallama et al. "
+            "arXiv:2306.06657, 2309.14152. Film is a coating; tracking "
+            "angles are unpublished — not meshed as a mitigated state.",
         ),
         notes="Two 2-axis arrays: shoulder +x, wrist +y from rest +z. "
               "Travel unpublished (±π stand-in). DTC is a nadir-facing "
               "deployable only when dtc=True. Study LIBRARY "
-              "`shapes.starlink_v2mini` is unchanged.",
+              "`shapes.starlink_v2mini` is unchanged. Unmitigated "
+              "stand-in: no visor CAD, no invented terminator-track "
+              "angles, CELLS/MLI not retuned to Mallama.",
         dimension_status={
             "bus": STATUS_PUBLIC, "arrays": STATUS_PUBLIC,
             "array_gimbal": STATUS_PUBLIC,

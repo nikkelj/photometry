@@ -610,3 +610,25 @@ def test_starlink_catalog_magnitude_order_vs_mallama():
     dm = 5.0 * np.log10(1000.0 / 550.0)
     assert 2.5 < v15_72 + dm < 10.5
     assert 1.5 < v2_72 + dm < 9.5
+
+
+def test_starlink_90deg_zenith_ram_is_edge_on_dark():
+    """Unmitigated LVLH: zenith observer + ram sun → flats edge-on.
+
+    Public VisorSat shade has no cited size/angle; dielectric film is a
+    coating; knife-edge / terminator tracking are unpublished attitudes.
+    Those are not meshed (honest no). This pose still goes dark from
+    geometry alone — not Mallama's sky-average 90° bin.
+    """
+    from photometry.radiometry import apparent_magnitude, facet_brightness
+
+    u_sun = unit(np.array([[1.0, 0.0, 0.0]]))
+    u_obs = unit(np.array([[0.0, 0.0, -1.0]]))
+    rng = np.array([550.0])
+    for fid in ("starlink_v15", "starlink_v2mini"):
+        m = family(fid)
+        n = m.body_normals(u_sun, articulate=True)
+        b = float(facet_brightness(m, u_sun, u_obs, n).sum())
+        mag = float(apparent_magnitude(m, u_sun, u_obs, rng, normals=n)[0])
+        assert b < 1e-12, fid
+        assert mag > 20.0, fid
