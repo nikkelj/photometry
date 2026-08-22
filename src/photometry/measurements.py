@@ -25,7 +25,8 @@ class ObservationSet:
 
     t_s:         (K,) time since epoch, seconds
     obs_id:      (K,) observing satellite index
-    tracker_id:  (K,) star tracker index on that satellite (0..2)
+    tracker_id:  (K,) star tracker index on that satellite (ADCS 0..2;
+                 hosted SSA heads continue from 3 if present)
     obs_pos_km:  (K,3) observer ECI position
     los_eci:     (K,3) unit line-of-sight observer -> target (the "angles")
     sun_eci:     (K,3) unit sun direction (ECI)

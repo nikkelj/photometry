@@ -93,7 +93,7 @@ caught up. Reading this table top-to-bottom is the development history.
 
 | Stage | Model added | Why it matters |
 |---|---|---|
-| T1 | Walker shell (100×100 sats, 550 km/53°), three trackers per sat at +5° LVLH elevation, 7° half-angle FOV, sun exclusion, Earth-limb clearance, eclipse | The opportunistic sensor. Also produced the first architectural finding: up-canted trackers only see objects **above** the shell |
+| T1 | Walker shell (100×100 sats, 550 km/53°), three trackers per sat at +5° LVLH elevation, 7° half-angle FOV, sun exclusion, local-horizontal clearance, eclipse | The opportunistic ADCS sensor. Up-canted trackers only see objects **above** the shell — co-alt / below-shell LOS never clears the local horizontal |
 | T2 | Facet radiometry: Lambert + Phong per facet, material classes (MLI, cells, white paint, antenna) | Brightness is BRDF physics, not albedo-times-area; specular glints carry the sharpest attitude information |
 | T3 | Generic box-wing target, principal-axis spin | The controlled baseline every algorithm was first proven on |
 | T4 | Seven-satellite library from open-source dimensions: Starlink v1.5 / v2 mini / v2 mini DTC, BlueWalker 3, Hubble, ISS, Katalyst LINK | Real geometry diversity: plates, tubes, giant slabs, bus+wings |
@@ -222,10 +222,19 @@ right panel, error halved vs uniform spin:*
 
 ## Standing findings
 
-- **Altitude visibility envelope**: +5°-canted trackers only see objects
-  above the shell; ISS (420 km), Hubble (~530 km), LINK/Swift (~500 km)
-  are invisible to a 550 km shell at their real altitudes. The study
-  flies all targets at a common 620 km orbit.
+- **Altitude visibility envelope**: co-alt and below-shell lines of
+  sight never rise above the observer's local horizontal (geometry,
+  not FOV size). The +5° / 7° ADCS suite therefore cannot see ISS
+  (420 km), Hubble (~530 km), LINK/Swift (~500 km), DTC (~360 km), or
+  in-shell Starlinks at catalog altitudes. Published fleet numbers fly
+  an explicit 620 km / 70° study torus (`scenarios.study_orbit()` /
+  `FleetScenario.orbit(study_torus=True)`) so those targets stay above
+  the shell. Honest altitudes are `FleetScenario.orbit()`; seeing them
+  takes a hosted SSA down-looker (`sensing.hosted_ssa_config()`) — a
+  4th head on a subset of buses, canted ~−8° with a 12° half-angle,
+  clipped at the ~200 km airglow limb (~−18° from 550 km). The three
+  ADCS trackers stay +5° / 7° for lost-in-space. Check with
+  `python -m pytest tests/test_visibility.py -q`.
 - **Censoring is the tall pole for big objects**: the bright spin phases
   are exactly the saturated ones, so calibrated-only photometry both
   shrinks apparent size and hides the spin. One-sided censored terms
@@ -258,3 +267,6 @@ right panel, error halved vs uniform spin:*
    sources by role, the reduction pipeline, the calibration loop, code
    adapters, and a worked loader skeleton — is
    [docs/real-data-integration.md](docs/real-data-integration.md).
+6. **Real-altitude inversion with hosted SSA**: the down-looker mode
+   makes co-alt / below-shell detections possible; the published
+   21-scenario stack has not been re-run at catalog altitudes.

@@ -1,11 +1,18 @@
 """Day-in-the-life fleet study scenarios: satellite type x attitude mode.
 
-All targets are simulated on a common study orbit (620 km / 70 deg) so the
-constellation viewing geometry is comparable across types. Real operating
-altitudes are recorded for reference — note that several real targets
-(ISS at ~420 km, Hubble at ~530 km, in-shell Starlinks) sit at or below the
-550 km shell, where trackers canted 5 deg above the local horizontal cannot
-see them: this architecture only observes objects above the shell altitude.
+Library targets carry their catalog altitude in `real_altitude_km`.
+`FleetScenario.orbit()` flies that altitude (same 70° study plane) so
+visibility is honest: co-alt and below-shell objects never rise above the
+observer's local horizontal, and the +5° ADCS suite cannot see them.
+
+The published 21-scenario numbers use an explicit 620 km / 70° torus
+(`study_orbit()` / `orbit(study_torus=True)`) so those targets stay above
+the shell by construction. That path is a named study geometry, not a
+silent relocation of ISS / Hubble / LINK / DTC.
+
+Below-shell work uses the ADCS suite plus `sensing.hosted_ssa_config()` —
+a 4th-head down-looker on a subset of buses, not a recant of the 10k
+lost-in-space trackers.
 """
 
 from __future__ import annotations
@@ -36,11 +43,20 @@ MULTIAXIS = dict(inertia=(1.0, 2.6, 3.2),
                  att_ra_deg=200.0, att_dec_deg=35.0)
 
 
-def study_orbit() -> WalkerConstellation:
-    orb = WalkerConstellation(1, 1, STUDY_ALT_KM, STUDY_INC_DEG)
-    orb._raan = np.array([np.radians(STUDY_RAAN_DEG)])
-    orb._u0 = np.array([np.radians(STUDY_ARG_LAT_DEG)])
+def circular_orbit(altitude_km: float,
+                   inclination_deg: float = STUDY_INC_DEG,
+                   raan_deg: float = STUDY_RAAN_DEG,
+                   arg_lat_deg: float = STUDY_ARG_LAT_DEG) -> WalkerConstellation:
+    """Single circular target orbit in the study plane at `altitude_km`."""
+    orb = WalkerConstellation(1, 1, altitude_km, inclination_deg)
+    orb._raan = np.array([np.radians(raan_deg)])
+    orb._u0 = np.array([np.radians(arg_lat_deg)])
     return orb
+
+
+def study_orbit() -> WalkerConstellation:
+    """Named 620 km / 70° torus used by published fleet results."""
+    return circular_orbit(STUDY_ALT_KM)
 
 
 def sun_eci() -> np.ndarray:
@@ -91,6 +107,12 @@ class FleetScenario:
 
     def shape(self):
         return LIBRARY[self.sat]()
+
+    def orbit(self, *, study_torus: bool = False) -> WalkerConstellation:
+        """Catalog altitude by default; pass `study_torus=True` for the 620 km path."""
+        if study_torus:
+            return study_orbit()
+        return circular_orbit(self.real_altitude_km)
 
 
 SCENARIOS: list[FleetScenario] = [

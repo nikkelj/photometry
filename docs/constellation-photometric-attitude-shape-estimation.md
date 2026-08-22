@@ -4,9 +4,13 @@
 
 A constellation of ~10,000 satellites each carries three star trackers, canted ~5° above
 the local horizontal in the LVLH frame to keep the Earth limb and albedo out of the field
-of view. As a side effect, every tracker stares through a shell of near-tangent geometry
-in which other resident space objects (RSOs) routinely transit the FOV. Each opportunistic
-detection yields:
+of view (lost-in-space ADCS, not an SSA design). Same-altitude and below-shell objects
+never appear above that local horizontal, so those three heads cannot see them; a hosted
+payload on a subset of buses — extra heads canted below the horizontal, with an
+airglow-limb keep-out — is the way to observe that population without recanting the ADCS
+suite (`photometry.sensing.hosted_ssa_config`). As a side effect of the +5° cant, every
+tracker stares through a shell of near-tangent geometry in which *above-shell* resident
+space objects (RSOs) routinely transit the FOV. Each opportunistic detection yields:
 
 - a time-tagged unit vector (angles) to the target in the inertial frame, and
 - an instrumental visual magnitude.

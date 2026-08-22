@@ -81,17 +81,27 @@ class WalkerConstellation:
         return r, v
 
 
-def tracker_boresights_lvlh(elevation_deg: float = 5.0,
+def tracker_boresights_lvlh(elevation_deg: float | tuple[float, ...] = 5.0,
                             azimuths_deg: tuple[float, ...] = (0.0, 120.0, 240.0)) -> np.ndarray:
     """Star tracker boresights in the LVLH (along, cross, up) frame, shape (T,3).
 
     Elevation is measured up from the local horizontal plane; azimuth 0 is the
-    along-track direction.
+    along-track direction. A scalar elevation is broadcast across azimuths;
+    a sequence must match `azimuths_deg` (or be length 1) so mixed cants
+    (e.g. a hosted down-looker next to the +5° ADCS suite) share this helper.
     """
-    el = np.radians(elevation_deg)
-    az = np.radians(np.asarray(azimuths_deg, dtype=float))
+    az = np.asarray(azimuths_deg, dtype=float)
+    el = np.asarray(elevation_deg, dtype=float)
+    if el.ndim == 0 or el.size == 1:
+        el = np.full(az.shape, float(el.reshape(())))
+    elif az.size == 1:
+        az = np.full(el.shape, float(az.reshape(())))
+    elif el.shape != az.shape:
+        raise ValueError("elevation_deg and azimuths_deg must be the same length")
+    el = np.radians(el)
+    az = np.radians(az)
     return np.stack(
-        [np.cos(el) * np.cos(az), np.cos(el) * np.sin(az), np.full_like(az, np.sin(el))],
+        [np.cos(el) * np.cos(az), np.cos(el) * np.sin(az), np.sin(el)],
         axis=-1,
     )
 

@@ -85,6 +85,33 @@ def lvlh_basis(r: np.ndarray, v: np.ndarray) -> tuple[np.ndarray, np.ndarray, np
     return along, cross, up
 
 
+def los_elevation_deg(r_obs: np.ndarray, r_tgt: np.ndarray) -> np.ndarray:
+    """Elevation of observer→target LOS above the observer local horizontal, deg.
+
+    Same-altitude and below-observer targets have elevation ≤ 0 at every
+    geometry: (r_tgt − r_obs) · r_obs = |r_obs|(|r_tgt| cos θ − |r_obs|),
+    which cannot be positive when |r_tgt| ≤ |r_obs|. That is why +5° ADCS
+    trackers (LOS kept above the local horizontal) never see co-alt or
+    below-shell objects — FOV size is not the constraint.
+    """
+    r_obs = np.asarray(r_obs, dtype=float)
+    r_tgt = np.asarray(r_tgt, dtype=float)
+    if r_tgt.ndim == 1 and r_obs.ndim > 1:
+        r_tgt = np.broadcast_to(r_tgt, r_obs.shape)
+    d = r_tgt - r_obs
+    return np.degrees(np.arcsin(np.clip(np.sum(unit(d) * unit(r_obs), axis=-1), -1.0, 1.0)))
+
+
+def layer_limb_elevation_deg(observer_radius_km: float,
+                             layer_altitude_km: float = 200.0) -> float:
+    """Local-horizontal elevation (negative) of a spherical layer's limb.
+
+    From a 550 km shell the ~200 km airglow layer sits near −18°.
+    """
+    r_layer = R_EARTH + layer_altitude_km
+    return float(-np.degrees(np.arccos(np.clip(r_layer / float(observer_radius_km), 0.0, 1.0))))
+
+
 def fibonacci_sphere(n: int) -> np.ndarray:
     """n roughly-uniform unit vectors on the sphere, shape (n,3)."""
     i = np.arange(n) + 0.5
