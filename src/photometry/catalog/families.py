@@ -114,7 +114,7 @@ def oneweb() -> FacetModel:
     return b.build().set_look(
         "bus -z", (0, 0, -1), attitude=ATT_LVLH,
         notes="Ku/Ka user face; Earth-pointing service (nadir in LVLH).",
-        status=STATUS_TYPICAL)
+        status=STATUS_TYPICAL).ensure_mirror_polygons()
 
 
 def kuiper() -> FacetModel:
@@ -159,7 +159,7 @@ def kuiper() -> FacetModel:
         notes="User phased-array face is Earth-pointing in public imagery; "
               "exact body-frame boresight unpublished — −z is the stand-in "
               "nadir face, tagged typical_class.",
-        status=STATUS_TYPICAL)
+        status=STATUS_TYPICAL).ensure_mirror_polygons()
 
 
 def qianfan() -> FacetModel:
@@ -390,7 +390,7 @@ def geo_bus() -> FacetModel:
                      "also exists. Not invented ion pointing.",
         flight_attitude=ATT_NADIR,
     )
-    return b.build()
+    return b.build().ensure_mirror_polygons()
 
 
 def gnss_meo() -> FacetModel:
@@ -483,7 +483,7 @@ def starlink_v15_fcc() -> FacetModel:
     return b.build().set_look(
         "bus -z", (0, 0, -1), attitude=ATT_LVLH,
         notes="User phased-array face (Earth / nadir in LVLH-hold).",
-        status=STATUS_PUBLIC)
+        status=STATUS_PUBLIC).ensure_mirror_polygons()
 
 
 def iss_nasa() -> FacetModel:
@@ -534,7 +534,7 @@ def iss_nasa() -> FacetModel:
         "radiator", None, attitude=ATT_LVLH,
         notes="PVR/EATCS 1-axis about orbit-normal. Operational thermal "
               "look schedule is unpublished — not invented.",
-        status=STATUS_UNKNOWN)
+        status=STATUS_UNKNOWN).ensure_mirror_polygons()
 
 
 def starlink_v2mini_fcc(dtc: bool = False) -> FacetModel:
@@ -596,7 +596,7 @@ def starlink_v2mini_fcc(dtc: bool = False) -> FacetModel:
     return b.build().set_look(
         "bus -z", (0, 0, -1), attitude=ATT_LVLH,
         notes="User phased-array face (Earth / nadir in LVLH-hold).",
-        status=STATUS_PUBLIC)
+        status=STATUS_PUBLIC).ensure_mirror_polygons()
 
 
 def leo_box_wing() -> FacetModel:

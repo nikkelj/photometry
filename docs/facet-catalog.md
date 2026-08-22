@@ -11,7 +11,10 @@ uses higher-fidelity stand-ins for Starlink v1.5 / v2 Mini / ISS (FCC /
 NASA areas, explicit hinges, documented looks); the study factories
 `shapes.starlink_v15()` / `shapes.starlink_v2mini()` / `shapes.iss()` keep
 the study meshes. Articulation is the same `body_normals` path (extended
-hinge, not a second articulator).
+hinge, not a second articulator). High-count catalog stand-ins carry
+rest-pose `polygons` (bus / array / deployable quads, including
+mirror-backs) for movie/truth viz only — photometry still uses
+areas + normals. Study LIBRARY drawable lists are not filled.
 
 ```python
 from photometry.catalog import family, resolve, coverage_report

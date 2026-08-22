@@ -23,8 +23,14 @@ from photometry.shapes import (
     PANEL_BACK,
     _Builder,
     iss as study_iss,
+    polygon_area_normal,
     starlink_v15 as study_starlink_v15,
     starlink_v2mini,
+)
+
+HIGH_COUNT = (
+    "starlink_v15", "starlink_v2mini", "starlink_v2mini_dtc",
+    "oneweb", "kuiper", "geo_bus", "iss",
 )
 
 STUDY_LIBRARY = {
@@ -445,3 +451,108 @@ def test_high_count_surfaces_complete():
             assert all(m.material_class[i] == "CELLS" for i in fronts), fid
         if backs:
             assert all(m.material_class[i] == "PANEL_BACK" for i in backs), fid
+
+
+def _assert_poly_matches_facet(m, verts, i, *, plane_rtol=1e-6):
+    assert 0 <= i < m.n_facets
+    area, n = polygon_area_normal(verts)
+    assert area > 0
+    rel = abs(area - m.areas[i]) / m.areas[i]
+    lab = m.labels[i].lower()
+    # Cylinder sides/caps: photometry uses the true circular area; the
+    # drawable is an inscribed n-gon (chord < arc).
+    if "side" in lab or "cap" in lab or len(verts) > 4:
+        assert rel < 0.06, (m.name, m.labels[i], rel)
+    else:
+        assert rel < plane_rtol, (m.name, m.labels[i], rel)
+    assert np.allclose(n, m.normals[i], atol=1e-7), (m.name, m.labels[i])
+
+
+def test_every_existing_polygon_matches_facet():
+    """Any stored rest-pose poly must match that facet's area and winding."""
+    for fid in FAMILIES:
+        m = family(fid)
+        seen = set()
+        for verts, i in m.polygons:
+            _assert_poly_matches_facet(m, verts, i)
+            seen.add(i)
+        assert len(seen) == len(m.polygons)
+
+
+def test_high_count_rest_pose_polygons_complete_and_oml():
+    """Catalog SATCAT stand-ins already had bus/array/deployable quads.
+
+    This pass locks OML spans to the cited figures and fills mirror-back
+    quads on the catalog copies only. Study LIBRARY is not touched.
+    """
+    spans = {}
+    for fid in HIGH_COUNT:
+        m = family(fid)
+        have = {i for _, i in m.polygons}
+        assert have == set(range(m.n_facets)), (fid, m.n_facets - len(have))
+        for verts, i in m.polygons:
+            _assert_poly_matches_facet(m, verts, i)
+        allv = np.vstack([v for v, _ in m.polygons])
+        spans[fid] = allv.max(0) - allv.min(0)
+
+    # FCC v1.5: bus 2.8×1.3×0.2, array 2.8×8.1, ~11.2 m end-to-end.
+    assert np.allclose(spans["starlink_v15"], [11.2, 2.8, 0.2], atol=1e-6)
+    v15 = family("starlink_v15")
+    arr = next(v for v, i in v15.polygons if v15.labels[i] == "array front")
+    a, _ = polygon_area_normal(arr)
+    assert abs(a - 8.1 * 2.8) < 1e-8
+
+    # FCC v2 Mini: two 4.1×12.8 m wings, ~30 m tip-to-tip.
+    assert np.allclose(spans["starlink_v2mini"][:2], [30.5, 4.1], atol=1e-6)
+    v2 = family("starlink_v2mini")
+    fore = next(v for v, i in v2.polygons if v2.labels[i] == "array fore front")
+    a, _ = polygon_area_normal(fore)
+    assert abs(a - 12.8 * 4.1) < 1e-8
+    assert spans["starlink_v2mini_dtc"][2] >= 0.5  # DTC off −z
+
+    # KeepTrack ARROW 5 m tip-to-tip; protoflight Kuiper 10 m; GEO mid 22.8 m.
+    assert abs(spans["oneweb"][1] - 5.0) < 1e-6
+    assert abs(spans["kuiper"][1] - 10.0) < 1e-6
+    assert abs(spans["geo_bus"][1] - 22.8) < 1e-6
+
+    # NASA ISS: 50 m stack, 109 m truss inside a 35×36 m array group.
+    iss = family("iss")
+    assert abs(spans["iss"][0] - 50.0) < 1e-6
+    truss = next(v for v, i in iss.polygons if iss.labels[i] == "truss +x")
+    assert abs(truss[:, 1].max() - truss[:, 1].min() - 109.0) < 1e-6
+    stbd = next(v for v, i in iss.polygons if iss.labels[i] == "arrays stbd front")
+    a, _ = polygon_area_normal(stbd)
+    assert abs(a - 35.0 * 36.0) < 1e-8
+
+
+def test_study_library_polygons_not_churned():
+    """Study meshes keep their original drawable lists (no mirror-back fill)."""
+    m = study_starlink_v15()
+    have = {i for _, i in m.polygons}
+    assert len(m.polygons) == 7
+    assert any(m.labels[i] == "array back" and i not in have
+               for i in range(m.n_facets))
+    study = study_iss()
+    assert len(study.polygons) == 16
+    cat = family("iss")
+    assert len(cat.polygons) == cat.n_facets == 20
+
+
+def test_photometry_ignores_polygons():
+    from photometry.radiometry import facet_brightness
+    m = family("starlink_v2mini")
+    u = unit(np.array([[0.3, 0.4, 0.86]]))
+    b0 = facet_brightness(m, u, u)
+    m.polygons = []
+    b1 = facet_brightness(m, u, u)
+    assert np.allclose(b0, b1)
+
+
+def test_hinge_does_not_rewrite_rest_pose_polygons():
+    m = family("starlink_v15")
+    before = [np.array(v, copy=True) for v, _ in m.polygons]
+    sun = unit(np.array([[0.8, 0.4, 0.45]]))
+    m.body_normals(sun, articulate=True)
+    after = [v for v, _ in m.polygons]
+    for a, b in zip(before, after):
+        assert np.allclose(a, b)

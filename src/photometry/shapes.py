@@ -39,6 +39,22 @@ from .frames import unit
 def _fmt_vec(v) -> str:
     return "[" + ",".join(f"{float(x):.3f}" for x in v) + "]"
 
+
+def polygon_area_normal(verts: np.ndarray) -> tuple[float, np.ndarray]:
+    """Planar polygon area and unit normal from vertex winding (Newell).
+
+    Drawable helper only — photometry uses `areas` / `normals`, not this.
+    """
+    v = np.asarray(verts, dtype=float)
+    acc = np.zeros(3)
+    for i in range(len(v)):
+        a, b = v[i], v[(i + 1) % len(v)]
+        acc += np.cross(a, b)
+    mag = float(np.linalg.norm(acc))
+    if mag < 1e-15:
+        return 0.0, np.array([0.0, 0.0, 1.0])
+    return 0.5 * mag, acc / mag
+
 GIMBAL_FIXED = 0
 GIMBAL_1AXIS = 1
 GIMBAL_2AXIS = 2
@@ -316,6 +332,23 @@ class FacetModel:
                 self.look_status[i] = status
         return self
 
+    def ensure_mirror_polygons(self) -> "FacetModel":
+        """Copy each front quad onto its mirror facet, reversed winding.
+
+        Drawable rest-pose only. Photometry still uses areas + normals.
+        Study LIBRARY factories do not call this.
+        """
+        have = {i for _, i in self.polygons}
+        by_i = {i: np.asarray(v, dtype=float) for v, i in self.polygons}
+        extra = []
+        for j in range(self.n_facets):
+            src = int(self.mirror_of[j])
+            if src >= 0 and j not in have and src in by_i:
+                extra.append((by_i[src][::-1].copy(), j))
+        if extra:
+            self.polygons = list(self.polygons) + extra
+        return self
+
     def characteristic_radius(self) -> float:
         """Rough size scale (m) from drawable geometry, for rendering."""
         if not self.polygons:
@@ -529,6 +562,8 @@ class _Builder:
                 base = c + n * d[ax]
                 poly = [base + e_u + e_v, base - e_u + e_v, base - e_u - e_v,
                         base + e_u - e_v]
+                if sign < 0:
+                    poly = list(reversed(poly))
                 m = mats[k] if mats else mat
                 sgn = "+" if sign > 0 else "-"
                 self.facet(n, area, m, f"{label} {sgn}{names[ax]}", polygon=poly)
@@ -573,13 +608,16 @@ class _Builder:
             n = np.cos((th0 + th1) / 2) * e1 + np.sin((th0 + th1) / 2) * e2
             p0 = c + r * (np.cos(th0) * e1 + np.sin(th0) * e2)
             p1 = c + r * (np.cos(th1) * e1 + np.sin(th1) * e2)
-            poly = [p0 + half, p1 + half, p1 - half, p0 - half]
+            # Winding must match the outward normal (p1→p0 on the +axis rim).
+            poly = [p0 + half, p0 - half, p1 - half, p1 + half]
             self.facet(n, side_area, side_mat, f"{label} side{i}", polygon=poly)
         cap_area = np.pi * r**2
         for sign, mat, tag in [(1, cap_mats[0], "+cap"), (-1, cap_mats[1], "-cap")]:
             th = np.linspace(0, 2 * np.pi, 13)
             poly = [c + sign * half + r * (np.cos(t) * e1 + np.sin(t) * e2)
                     for t in th[:-1]]
+            if sign < 0:
+                poly = list(reversed(poly))
             self.facet(sign * a, cap_area, mat, f"{label} {tag}", polygon=poly)
 
     def build(self) -> FacetModel:
