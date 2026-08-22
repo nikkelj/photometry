@@ -6,51 +6,16 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from .attitude import PrincipalAxisSpin
 from .constellation import WalkerConstellation, boresights_eci, tracker_boresights_lvlh
 from .frames import in_earth_shadow, lvlh_basis, unit
 from .measurements import ObservationSet
 from .radiometry import apparent_magnitude
 from .shapes import FacetModel
 
-# ~200 km airglow limb as seen from the 550 km shell (see layer_limb_elevation_deg).
-AIRGLOW_KEEP_OUT_DEG = -18.0
-
-
-@dataclass
-class HostedSSAConfig:
-    """Extra SSA heads on a subset of buses. Does not recant the ADCS suite.
-
-    The default is a 4th-head down-looker: −8° LVLH elevation, 12° half-angle,
-    along-track, hosted on every `host_stride`-th bus. LOS is clipped at the
-    ~200 km airglow limb (~−18° from 550 km), not through nadir. Mixed cants
-    (e.g. a +8° search companion) are the same config with extra elevations.
-    """
-
-    fov_half_angle_deg: float = 12.0
-    elevations_deg: tuple[float, ...] = (-8.0,)
-    azimuths_deg: tuple[float, ...] = (0.0,)
-    min_los_elevation_deg: float = AIRGLOW_KEEP_OUT_DEG
-    host_stride: int = 10
-
-    def __post_init__(self) -> None:
-        if self.host_stride < 1:
-            raise ValueError("host_stride must be >= 1")
-        n_el, n_az = len(self.elevations_deg), len(self.azimuths_deg)
-        if n_el != n_az and min(n_el, n_az) != 1:
-            raise ValueError("elevations_deg and azimuths_deg must match or broadcast")
-
-    def boresights_lvlh(self) -> np.ndarray:
-        return tracker_boresights_lvlh(self.elevations_deg, self.azimuths_deg)
-
 
 @dataclass
 class SensorConfig:
-    """ADCS star-tracker suite (lost-in-space): three +5° LVLH heads, 7° FOV.
-
-    Optional `hosted_ssa` adds extra heads on a subset of buses; it does not
-    widen or recant these three.
-    """
-
     fov_half_angle_deg: float = 7.0
     tracker_elevation_deg: float = 5.0
     tracker_azimuths_deg: tuple[float, ...] = (0.0, 120.0, 240.0)
@@ -58,64 +23,8 @@ class SensorConfig:
     saturation_mag: float = -1.0
     mag_noise_sigma: float = 0.08
     sun_exclusion_deg: float = 40.0
-    min_los_elevation_deg: float = 1.0  # keep the line of sight above the local horizontal
+    min_los_elevation_deg: float = 1.0  # keep the line of sight above the Earth limb
     max_range_km: float = 3000.0
-    hosted_ssa: HostedSSAConfig | None = None
-
-    def adcs_boresights_lvlh(self) -> np.ndarray:
-        return tracker_boresights_lvlh(self.tracker_elevation_deg, self.tracker_azimuths_deg)
-
-
-def hosted_ssa_config(host_stride: int = 10, **ssa_kwargs) -> SensorConfig:
-    """ADCS suite plus a hosted down-looker payload on every Nth bus."""
-    return SensorConfig(hosted_ssa=HostedSSAConfig(host_stride=host_stride, **ssa_kwargs))
-
-
-def heads_in_view(
-    r_sat: np.ndarray,
-    v_sat: np.ndarray,
-    r_tgt: np.ndarray,
-    b_lvlh: np.ndarray,
-    fov_half_angle_deg: float,
-    min_los_elevation_deg: float,
-    sun_eci: np.ndarray | None = None,
-    sun_exclusion_deg: float = 40.0,
-) -> np.ndarray:
-    """Boolean (N, T): each head sees `r_tgt` (FOV + LOS elevation + optional sun)."""
-    r_sat = np.asarray(r_sat, dtype=float)
-    v_sat = np.asarray(v_sat, dtype=float)
-    r_tgt = np.asarray(r_tgt, dtype=float)
-    if r_sat.ndim == 1:
-        r_sat = r_sat[None, :]
-        v_sat = v_sat[None, :]
-    d = r_tgt - r_sat
-    rng = np.linalg.norm(d, axis=-1, keepdims=True)
-    los = np.divide(d, rng, out=np.zeros_like(d), where=rng > 0)
-    return _hits_from_los(
-        r_sat, v_sat, los, b_lvlh, fov_half_angle_deg, min_los_elevation_deg,
-        None if sun_eci is None else unit(np.asarray(sun_eci, dtype=float)),
-        sun_exclusion_deg,
-    )
-
-
-def _hits_from_los(
-    r_sat: np.ndarray,
-    v_sat: np.ndarray,
-    los: np.ndarray,
-    b_lvlh: np.ndarray,
-    fov_half_angle_deg: float,
-    min_los_elevation_deg: float,
-    sun: np.ndarray | None,
-    sun_exclusion_deg: float,
-) -> np.ndarray:
-    _, _, up = lvlh_basis(r_sat, v_sat)
-    el_ok = np.sum(los * up, axis=-1) > np.sin(np.radians(min_los_elevation_deg))
-    bores = boresights_eci(r_sat, v_sat, b_lvlh)
-    in_fov = np.einsum("ntj,nj->nt", bores, los) > np.cos(np.radians(fov_half_angle_deg))
-    hits = in_fov & el_ok[:, None]
-    if sun is not None:
-        hits = hits & ((bores @ sun) < np.cos(np.radians(sun_exclusion_deg)))
-    return hits
 
 
 def simulate_detections(
@@ -136,10 +45,10 @@ def simulate_detections(
     is any model exposing eci_to_body(t, v). With `articulate` True, gimbaled
     facets track the sun per the shape's articulation rules.
     """
-    adcs_b = sensors.adcs_boresights_lvlh()
-    n_adcs = adcs_b.shape[0]
-    ssa = sensors.hosted_ssa
-    ssa_b = ssa.boresights_lvlh() if ssa is not None and ssa.azimuths_deg else None
+    b_lvlh = tracker_boresights_lvlh(sensors.tracker_elevation_deg, sensors.tracker_azimuths_deg)
+    cos_fov = np.cos(np.radians(sensors.fov_half_angle_deg))
+    cos_sun_excl = np.cos(np.radians(sensors.sun_exclusion_deg))
+    sin_min_el = np.sin(np.radians(sensors.min_los_elevation_deg))
     sun = unit(np.asarray(sun_eci, dtype=float))
 
     rows: list[dict] = []
@@ -158,28 +67,18 @@ def simulate_detections(
         idx = np.nonzero(near)[0]
         los = d_vec[idx] / rng_km[idx, None]
 
-        adcs_hits = _hits_from_los(
-            r_sat[idx], v_sat[idx], los, adcs_b,
-            sensors.fov_half_angle_deg, sensors.min_los_elevation_deg,
-            sun, sensors.sun_exclusion_deg,
-        )
-        n_i, t_i = np.nonzero(adcs_hits)
+        # LOS must clear the Earth limb (elevation above local horizontal)
+        _, _, up = lvlh_basis(r_sat[idx], v_sat[idx])
+        el_ok = np.sum(los * up, axis=-1) > sin_min_el
 
-        if ssa_b is not None:
-            hosted = np.nonzero((idx % ssa.host_stride) == 0)[0]
-            if hosted.size:
-                ssa_hits = _hits_from_los(
-                    r_sat[idx[hosted]], v_sat[idx[hosted]], los[hosted], ssa_b,
-                    ssa.fov_half_angle_deg, ssa.min_los_elevation_deg,
-                    sun, sensors.sun_exclusion_deg,
-                )
-                h_n, h_t = np.nonzero(ssa_hits)
-                n_i = np.concatenate([n_i, hosted[h_n]])
-                t_i = np.concatenate([t_i, n_adcs + h_t])
-
-        if n_i.size == 0:
+        bores = boresights_eci(r_sat[idx], v_sat[idx], b_lvlh)  # (n,T,3)
+        in_fov = np.einsum("ntj,nj->nt", bores, los) > cos_fov
+        sun_ok = (bores @ sun) < cos_sun_excl
+        hits = in_fov & sun_ok & el_ok[:, None]
+        if not hits.any():
             continue
 
+        n_i, t_i = np.nonzero(hits)
         sat_idx = idx[n_i]
         k = len(sat_idx)
         u_obs_eci = -los[n_i]  # target -> observer

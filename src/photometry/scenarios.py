@@ -9,10 +9,6 @@ The published 21-scenario numbers use an explicit 620 km / 70° torus
 (`study_orbit()` / `orbit(study_torus=True)`) so those targets stay above
 the shell by construction. That path is a named study geometry, not a
 silent relocation of ISS / Hubble / LINK / DTC.
-
-Below-shell work uses the ADCS suite plus `sensing.hosted_ssa_config()` —
-a 4th-head down-looker on a subset of buses, not a recant of the 10k
-lost-in-space trackers.
 """
 
 from __future__ import annotations

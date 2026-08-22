@@ -30,7 +30,7 @@ def run_scenario(s: sc.FleetScenario, outroot: Path) -> dict:
     rng = np.random.default_rng(s.seed)
     shell = WalkerConstellation()
     # Named 620 km torus: keeps published fleet numbers reproducible.
-    # Catalog altitudes are s.orbit(); those need hosted SSA to see below-shell.
+    # Catalog altitudes are s.orbit(); ADCS +5° cannot see below-shell.
     orbit = s.orbit(study_torus=True)
     sun = sc.sun_eci()
     shape = s.shape()

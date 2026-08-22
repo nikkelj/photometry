@@ -102,16 +102,6 @@ def los_elevation_deg(r_obs: np.ndarray, r_tgt: np.ndarray) -> np.ndarray:
     return np.degrees(np.arcsin(np.clip(np.sum(unit(d) * unit(r_obs), axis=-1), -1.0, 1.0)))
 
 
-def layer_limb_elevation_deg(observer_radius_km: float,
-                             layer_altitude_km: float = 200.0) -> float:
-    """Local-horizontal elevation (negative) of a spherical layer's limb.
-
-    From a 550 km shell the ~200 km airglow layer sits near −18°.
-    """
-    r_layer = R_EARTH + layer_altitude_km
-    return float(-np.degrees(np.arccos(np.clip(r_layer / float(observer_radius_km), 0.0, 1.0))))
-
-
 def fibonacci_sphere(n: int) -> np.ndarray:
     """n roughly-uniform unit vectors on the sphere, shape (n,3)."""
     i = np.arange(n) + 0.5
