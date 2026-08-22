@@ -476,7 +476,11 @@ def starlink_v15() -> FacetModel:
         dimension_status={"bus": STATUS_PUBLIC, "array": STATUS_PUBLIC,
                           "thrust_vector": STATUS_UNKNOWN},
         thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_EP,
-        thrust_notes="EP is public; Hall/ion pointing vs LVLH is not published.",
+        thrust_notes="Searched SpaceX Gen2 PDF, FCC dimension table, "
+                     "SpaceNews/Spaceflight Now (krypton Hall exists; "
+                     "magnitude only). Everyday Astronaut claims ram-facing "
+                     "but is not a primary SpaceX/FCC citation — vector left "
+                     "empty.",
     )
     return b.build()
 
@@ -519,7 +523,9 @@ def starlink_v2mini(dtc: bool = False) -> FacetModel:
             **({"dtc_antenna": STATUS_RANGE} if dtc else {}),
         },
         thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_EP,
-        thrust_notes="EP is public; body-frame thrust vector is not published.",
+        thrust_notes="Searched SpaceX Gen2 PDF, FCC table, SpaceNews "
+                     "(argon Hall 170 mN / 4.2 kW). No primary body-frame "
+                     "vs ram/nadir citation — vector left empty.",
     )
     return b.build()
 

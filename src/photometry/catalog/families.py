@@ -99,7 +99,9 @@ def oneweb() -> FacetModel:
                           "array_height": STATUS_RANGE,
                           "thrust_vector": STATUS_UNKNOWN},
         thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_EP,
-        thrust_notes="Hall/xenon is public; pointing vs LVLH is not.",
+        thrust_notes="Searched Busek/SpaceNews (BHT-350 for EOR, SK, CA, "
+                     "deorbit) and Gunter (SPT-50/BHT-350). No body-frame "
+                     "vs ram/nadir published — vector left empty.",
     )
     return b.build()
 
@@ -131,7 +133,9 @@ def kuiper() -> FacetModel:
                           "array_gimbal": STATUS_UNCERTAIN,
                           "thrust_vector": STATUS_UNKNOWN},
         thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_EP,
-        thrust_notes="Krypton Hall is public; body-frame pointing is not.",
+        thrust_notes="Searched FCC Kuiper PDFs and eoPortal (krypton Hall "
+                     "exists). No thrust-axis vs ram/nadir/sun published — "
+                     "vector left empty.",
     )
     return b.build()
 
@@ -210,8 +214,10 @@ def iridium_next() -> FacetModel:
         dimension_status={"bus": STATUS_RANGE, "arrays": STATUS_PUBLIC,
                           "thrust_vector": STATUS_UNKNOWN},
         thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_CHEMICAL,
-        thrust_notes="Hydrazine RCS/Δv is public; a single body-frame vector "
-                     "is not (eight 1 N thrusters).",
+        thrust_notes="Searched FCC SAT-MOD-20131227-00148 engineering "
+                     "statement (nadir-pointing service; hydrazine 1 N class, "
+                     "eight thrusters). No single body-frame Δv vector — "
+                     "left empty.",
     )
     return b.build()
 
@@ -362,7 +368,8 @@ def gnss_meo() -> FacetModel:
         sources=("Lockheed GPS III public: ~27 m solar-array span, A2100-class.",
                  "KeepTrack NAVSTAR 79/82: 3.4×1.8 m, 14 m span (conflicts "
                  "with 27 m — span treated as a range, stand-in 27 m).",
-                 "GLONASS/Galileo/BeiDou MEO are the same class, not copies."),
+                 "GLONASS/BeiDou MEO stay on this class; Galileo FOC is "
+                 "the separate `galileo` family (dims differ)."),
         notes="Array span public-number conflict 14 vs 27 m. Yaw-steering "
               "attitude, not LVLH ram.",
         dimension_status={"bus": STATUS_RANGE, "arrays": STATUS_RANGE,

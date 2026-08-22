@@ -124,9 +124,56 @@ def test_mapping_examples():
     assert resolve("FALCON 9 R/B", object_type="R/B").family_id == "falcon9_s2"
     assert resolve("INTELSAT 902 (IS-902)", period_min=1436.0).family_id == "geo_bus"
     assert resolve("NAVSTAR 82 (USA 343)").family_id == "gnss_meo"
+    assert resolve("GSAT0101 (GALILEO-PFM)").family_id == "galileo"
     assert resolve("USA 105").family_id == "classified_unpublished"
     # Starshield internals are not invented
     assert resolve("USA 105").notes.lower().find("starshield") >= 0
+    # pass-2: must not dump these to leo_box_wing
+    named = {
+        "CAPELLA-11 (ACADIA-1)": "capella",
+        "UMBRA-07": "umbra",
+        "HAWK-A": "hawkeye360",
+        "GLOBAL-2": "blacksky",
+        "GLOBALSTAR M069": "globalstar2",
+        "ORBCOMM FM06": "orbcomm_og2",
+        "SENTINEL-1A": "sentinel1",
+        "SENTINEL-2A": "sentinel2",
+        "LANDSAT 8": "landsat8",
+        "CSS (TIANHE)": "css_tianhe",
+        "LEGION 1": "maxar_legion",
+        "WORLDVIEW-3 (WV-3)": "worldview",
+        "SPACEMOBILE-001": "bluebird",
+        "SPACEMOBILE-006": "bluebird_block2",
+        "TERRA": "terra",
+        "NOAA 20 (JPSS-1)": "jpss",
+        "SITRO-AIS 5 (KATYS)": "cubesat_6u",
+        "INMARSAT 3-F1": "geo_bus",
+        "GOES 16": "goes_r",
+        "SENTINEL-6A": "sentinel6",
+        "JASON-3": "sentinel6",
+        "METOP-B": "metop",
+        "ASTROCAST-0401": "cubesat_3u",
+        "NUSAT-1": "cubesat_6u",
+    }
+    for name, fam in named.items():
+        hit = resolve(name)
+        assert hit.family_id == fam, (name, hit)
+        assert hit.family_id != "leo_box_wing"
+    assert resolve("SNUSAT-1").family_id != "cubesat_6u"
+    assert resolve("DRAGONFLY").family_id != "cargo_dragon"
+    assert resolve("YZ-1 R/B", object_type="R/B").family_id == "cz_upper"
+    assert resolve("ATLAS 5 CENTAUR R/B", object_type="R/B").family_id == "centaur"
+    assert resolve("ATLAS AGENA D R/B", object_type="R/B").family_id == "agena"
+    assert resolve("FREGAT R/B", object_type="R/B").family_id == "fregat"
+    assert resolve("SL-8 R/B", object_type="R/B").family_id == "kosmos_3m"
+    assert resolve("SL-12 R/B", object_type="R/B").family_id == "proton_block_d"
+    assert resolve("PSLV R/B", object_type="R/B").family_id == "pslv_ps4"
+    assert resolve("IUS R/B(1)", object_type="R/B").family_id == "ius"
+    assert resolve("SCOUT G-1 R/B", object_type="R/B").family_id == "scout"
+    assert resolve("PEGASUS R/B", object_type="R/B").family_id == "pegasus"
+    assert resolve("ANIK C1 R/B [PAM-D]", object_type="R/B").family_id == "pam_d"
+    assert resolve("TITAN 3C TRANSTAGE R/B", object_type="R/B").family_id == "titan_transtage"
+    assert resolve("STARLINK-1008", launch_date="2019-11-11").confidence == "high"
 
 
 def test_coverage_against_vendored_snapshot():
@@ -139,12 +186,24 @@ def test_coverage_against_vendored_snapshot():
     assert pay["n"] == meta["n_active_payloads"]
     assert pay["fraction"] >= 0.99
     # Starlink alone is ~65% of the active catalog; named families must beat that.
-    assert pay["fraction_named"] > 0.70
+    assert pay["fraction_named"] > 0.80
     assert report["rocket_bodies"]["fraction"] >= 0.99
+    assert report["rocket_bodies"]["fraction_named"] > 0.55
     assert not report["mapped_to_unknown_family"]
     assert "starlink_v2mini" in pay["by_family"]
     assert "oneweb" in pay["by_family"]
     assert "kuiper" in pay["by_family"]
+    assert "capella" in pay["by_family"]
+    assert "sentinel1" in pay["by_family"]
+    assert "goes_r" in pay["by_family"]
+
+
+def test_surfaces_split_on_new_families():
+    m = family("capella")
+    classes = set(m.material_class)
+    assert "MLI" in classes and "CELLS" in classes and "ANTENNA" in classes
+    assert all(p == "unknown" for p in m.ir_provenance)
+    assert np.all(np.isnan(m.alpha_ir))
 
 
 def test_unknown_family_raises():

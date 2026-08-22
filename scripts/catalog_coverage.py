@@ -28,6 +28,10 @@ def main() -> int:
     for fam, n in pay["by_family"].items():
         print(f"  {n:6d}  {fam}")
     print()
+    print("rocket bodies by family:")
+    for fam, n in rb["by_family"].items():
+        print(f"  {n:6d}  {fam}")
+    print()
     print("payload confidence:", pay["by_confidence"])
     if r["unmapped_count"]:
         print(f"unmapped {r['unmapped_count']}: {r['unmapped_examples']}")
