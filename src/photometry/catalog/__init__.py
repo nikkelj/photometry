@@ -14,13 +14,21 @@ is unchanged so the 620 km inversion scenarios keep the same candidate set.
 
 from .mapping import MapHit, resolve, resolve_row
 from .registry import FAMILIES, family, list_families
-from .satcat import coverage_report, load_snapshot, snapshot_meta
+from .satcat import (
+    coverage_report,
+    leftover_inventory,
+    load_snapshot,
+    name_prefix,
+    snapshot_meta,
+)
 
 __all__ = [
     "FAMILIES",
     "MapHit",
     "coverage_report",
     "family",
+    "leftover_inventory",
+    "name_prefix",
     "list_families",
     "load_snapshot",
     "resolve",

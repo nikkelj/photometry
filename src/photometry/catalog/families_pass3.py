@@ -322,6 +322,54 @@ def thor_ablestar() -> FacetModel:
     )
 
 
+def cygnss() -> FacetModel:
+    """NASA CYGNSS (SATCAT CYGFM): 51×64×28 cm bus, 1.67 m wingspan."""
+    bus = (0.64, 0.51, 0.28)
+    b = _Builder("cygnss")
+    b.box((0, 0, 0), bus, MLI, "bus",
+          mats=[MLI, MLI, MLI, MLI, MLI, ANTENNA])
+    # 0.51 + 2×0.02 boom + 2×0.56 = 1.67 m tip-to-tip (eoPortal wingspan).
+    _two_wing(b, bus, (0.64, 0.56), gimbal=GIMBAL_FIXED, boom=0.02)
+    b.meta(
+        family_id="cygnss",
+        sources=("eoPortal CYGNSS: body ~51×64×28 cm, ~29 kg, two deployable "
+                 "arrays, wingspan 1.67 m. SwRI bus, nadir GNSS-R.",
+                 "NASA ESSP / Wikipedia deployed envelope 163.5×52.1×22.9 cm "
+                 "(includes the wings). SATCAT names CYGFMnn."),
+        notes="Arrays are GIMBAL_FIXED (nadir-hold microsat). Nadir (−z) is "
+              "the DDMI antenna face. Not a cubesat envelope.",
+        dimension_status={"bus": STATUS_PUBLIC, "arrays": STATUS_PUBLIC,
+                          "thrust_vector": STATUS_UNKNOWN},
+        thrust_attitude=ATT_NADIR, thrust_propulsion=PROP_NONE,
+        thrust_notes="No operational Δv thruster in the public CYGNSS record.",
+    )
+    return b.build()
+
+
+def h3_upper() -> FacetModel:
+    return _stage(
+        "h3_upper", 12.0, 5.27,
+        sources=("JAXA / MHI H3 second stage: 5.27 m core diameter, ~12 m "
+                 "length (public H3 vehicle description). SATCAT H-3 R/B.",
+                 "Not the H-IIA 4.0 m second stage (`h2_upper`)."),
+        notes="H-1 leftovers stay generic: different, unpublished-here OML.",
+        dimension_status={"diameter": STATUS_PUBLIC, "length": STATUS_PUBLIC},
+    )
+
+
+def iabs() -> FacetModel:
+    return _stage(
+        "iabs", 0.68, 2.90,
+        sources=("Public Atlas II / IABS description: Integrated Apogee "
+                 "Boost Stage 2.9 m diameter × 0.68 m long disc (DSCS III "
+                 "apogee kick; two R-4D). SATCAT IABS R/B.",),
+        notes="Flat disc, not a long upper stage. AKM/PKM of other families "
+              "are not lumped here — those sizes differ and stay leftover.",
+        dimension_status={"diameter": STATUS_PUBLIC, "length": STATUS_PUBLIC},
+        n_side=16,
+    )
+
+
 def burner2() -> FacetModel:
     return _stage(
         "burner2", 0.84, 0.66,

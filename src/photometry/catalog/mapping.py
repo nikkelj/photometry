@@ -130,6 +130,8 @@ _NAME_RULES: list[tuple[str, str, str, str, str]] = [
      "OHB Eaglet II <30×30×57 cm"),
     ("cubesat_6u", "prefix", "SITRO", "medium", "Sitronics AIS 6U-class"),
     ("cubesat_6u", "prefix", "CONNECTA", "medium", ""),
+    ("cygnss", "prefix", "CYGFM", "high", "NASA CYGNSS; SATCAT CYGFMnn"),
+    ("cubesat_6u", "prefix", "STARLING", "high", "NASA Starling 6U swarm"),
     ("cubesat_6u", "prefix", "NUSAT-", "medium", "Satellogic NewSat / ÑuSat"),
     ("cubesat_6u", "prefix", "NUSAT ", "medium", "Satellogic NewSat / ÑuSat"),
     ("cubesat_6u", "prefix", "BRO-", "medium", "Unseenlabs BRO"),
@@ -229,9 +231,14 @@ def _rocket(name: str) -> MapHit | None:
     if u.startswith("PSLV") or u.startswith("GSLV"):
         return MapHit("pslv_ps4", "medium" if u.startswith("PSLV") else "low",
                       "rb_isro", "GSLV uses the PSLV-class 2.8–3 m stand-in.")
-    if u.startswith("H-2") or u.startswith("H-II") or u.startswith("H2A") \
-            or u.startswith("H3 "):
+    if u.startswith("H-3") or u.startswith("H3 "):
+        return MapHit("h3_upper", "high", "rb_h3",
+                      "JAXA H3 second stage 5.27 m; not H-IIA 4.0 m.")
+    if u.startswith("H-2") or u.startswith("H-II") or u.startswith("H2A"):
         return MapHit("h2_upper", "high", "rb_h2", "")
+    if u.startswith("IABS"):
+        return MapHit("iabs", "high", "rb_iabs",
+                      "DSCS III Integrated Apogee Boost Stage 2.9×0.68 m.")
     if u.startswith("DELTA"):
         return MapHit("delta_upper", "medium", "rb_delta",
                       "2.4 m typical_class; Delta IV 4 m not split.")
@@ -239,9 +246,10 @@ def _rocket(name: str) -> MapHit | None:
         return MapHit("proton_block_d", "high", "rb_sl12", "")
     if u.startswith("SL-8"):
         return MapHit("kosmos_3m", "high", "rb_sl8", "")
-    if u.startswith("SL-14") or u.startswith("SL-19"):
+    if u.startswith("SL-14") or u.startswith("SL-19") or u.startswith("SL-11"):
         return MapHit("tsyklon3", "medium", "rb_sl14",
-                      "SL-19 is Tsyklon-2; same 2.5 m-class stand-in.")
+                      "SL-11/19 are Tsyklon-2; same 2.5 m-class stand-in "
+                      "as SL-14 (Tsyklon-3).")
     if u.startswith("SL-16"):
         return MapHit("zenit2", "high", "rb_sl16", "")
     if u.startswith("SL-23") or u.startswith("DNEPR") or u.startswith("SS-18"):

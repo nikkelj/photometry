@@ -6,8 +6,10 @@ format and not 10,000 unique meshes: every family builds a `FacetModel` the
 existing forward model already consumes (`rho_d`, `k_s`, `n_ph`, gimbals).
 
 The 620 km study-orbit library (`photometry.shapes.LIBRARY`) is **unchanged**
-so fleet identification numbers stay reproducible. New families live in
-`photometry.catalog.FAMILIES`, which includes the study set plus the rest.
+so fleet identification numbers stay reproducible. Catalog SATCAT mapping
+for Starlink v1.5 and ISS uses the cited FCC / NASA areas (see those
+rows); `shapes.starlink_v15()` / `shapes.iss()` keep the study meshes.
+New families live in `photometry.catalog.FAMILIES`.
 
 ```python
 from photometry.catalog import family, resolve, coverage_report
@@ -21,6 +23,7 @@ print(coverage_report()["active_payloads"]["fraction_named"])
 
 ```bash
 python scripts/catalog_coverage.py          # uses the vendored snapshot (no network)
+python scripts/catalog_leftovers.py         # leftover leo_box_wing / rocket_body prefixes
 python -m pytest tests/test_catalog.py tests/test_basics.py
 ```
 
@@ -50,11 +53,11 @@ Dimension provenance is `public` | `range` | `uncertain` | `typical_class` |
 
 | id | What | Arrays | Thrust |
 |---|---|---|---|
-| `starlink_v15` | FCC v1.5 (v1.0 lumped) | 1-axis | EP public, vector unknown |
-| `starlink_v2mini` / `_dtc` | FCC v2 Mini; DTC if SATCAT `[DTC]` | 2-axis | EP public, vector unknown |
+| `starlink_v15` | FCC v1.5 2.8×1.3 m bus, 2.8×8.1 m 1-axis array (catalog; study LIBRARY keeps 1.4 / 2.7) | 1-axis | EP public, vector unknown |
+| `starlink_v2mini` / `_dtc` | FCC v2 Mini 4.1×2.7 m, two 4.1×12.8 m 2-axis; DTC 2.0×2.3 m range | 2-axis | EP public, vector unknown |
 | `starlink_v2` | FCC Starship-class v2 | 2-axis | not mapped from SATCAT names |
-| `oneweb` | Airbus Arrow 1×1×1.3 m, 5 m span | 1-axis | xenon Hall, vector unknown |
-| `kuiper` | Amazon Leo; mass public, OML a range | 1-axis stand-in | Kr Hall, vector unknown |
+| `oneweb` | Airbus Arrow 1×1×1.3 m, **5.0 m** tip-to-tip (was 5.6) | 1-axis | xenon Hall, vector unknown |
+| `kuiper` | Amazon Leo; ~2 m / 10 m span range (protoflight class) | 1-axis stand-in | Kr Hall, vector unknown |
 | `qianfan` | G60 / Thousand Sails flat-pack | 1-axis (Mallama) | Kr Hall reported, vector unknown |
 | `hulianwang` | Guowang; Gunter: OML unpublished | 1-axis stand-in | EP believed, vector unknown |
 | `iridium_next` | 9.4 m span, sun-tracking | 1-axis | hydrazine, vector unknown |
@@ -70,6 +73,7 @@ Dimension provenance is `public` | `range` | `uncertain` | `typical_class` |
 | `esa_swarm` | ESA 9.1×1.5×0.85 m + boom | body-mounted | cold-gas, vector unused |
 | `ion_scv` | D-Orbit 60 cm / 64U | n/a | chemical, vector unknown |
 | `ghgsat` | SFL NEMO 20×30×40 cm | fixed | none |
+| `cygnss` | NASA CYGNSS 51×64×28 cm, 1.67 m span (`CYGFM`) | fixed | none |
 | `grus` | Axelspace ~0.6×0.6×0.8 m | fixed | unknown |
 | `capella` | FCC 3.5 m mesh SAR | fixed arrays + dish | unknown |
 | `umbra` | 10 m² mesh (eoPortal / patent) | 1-axis stand-in + mesh | unknown |
@@ -91,15 +95,16 @@ Dimension provenance is `public` | `range` | `uncertain` | `typical_class` |
 | `css_tianhe` | 16.6×4.2 m core; **not ISS** | 1-axis range | unknown |
 | `galileo` | ESA FOC, distinct from GPS-class | 2-axis | chemical, vector unknown |
 | `cubesat_3u` / `6u` / `16u` | CDS envelopes | fixed | unknown |
-| `geo_bus` | typical 3-axis GEO | 2-axis + nadir dish | NSSK +y class convention |
+| `geo_bus` | typical 3-axis GEO; N/S white radiators; ~22.8 m span | 2-axis + nadir dish | NSSK +y class convention |
 | `gnss_meo` | GPS IIF/III, GLONASS, BeiDou MEO | 2-axis | chemical, vector unknown |
 | `o3b` | original O3b MEO | 2-axis | chemical, vector unknown |
 | `cygnus` / `progress` / `cargo_dragon` | visiting vehicles | n/a | Progress +x when docked |
-| `iss` / `hubble` / `bluewalker3` / `katalyst_link` | existing study models | as before | ISS +x public; others unknown/none |
+| `iss` | NASA 2,500 m² / 109 m truss (catalog; study LIBRARY keeps 35×24) | 2-axis arrays + 1-axis radiators | ISS +x public |
+| `hubble` / `bluewalker3` / `katalyst_link` | existing study models | as before | unknown/none |
 | `falcon9_s2` / `cz_upper` / `ariane_upper` / `breeze_m` / `electron_kick` | stages | n/a | −z along cylinder |
 | `centaur` / `fregat` / `soyuz_block_i` / `proton_block_d` / `kosmos_3m` / `tsyklon3` / `zenit2` / `pslv_ps4` / `h2_upper` / `block_dm` / `delta_upper` | lingering stages | n/a | −z |
 | `ius` / `agena` / `scout` / `pegasus` / `pam_d` / `titan_transtage` | lingering stages | n/a | −z |
-| `atlas_core` / `titan_core` / `saturn_sivb` / `avum` / `firefly_alpha` / `dnepr` / `thor_ablestar` / `burner2` | lingering stages | n/a | −z |
+| `atlas_core` / `titan_core` / `saturn_sivb` / `avum` / `firefly_alpha` / `dnepr` / `thor_ablestar` / `burner2` / `h3_upper` / `iabs` | lingering stages | n/a | −z |
 | `rocket_body` | generic last-resort stage | n/a | −z |
 | `leo_box_wing` | LEO payload fallback | fixed | unknown |
 | `classified_unpublished` | USA / IGS / unpublished recon | uncertain placeholder | unknown; **not Starshield CAD** |
@@ -113,10 +118,16 @@ Jilin-1 (mixed 40–420 kg buses; eoPortal has mass, not one OML),
 optical Gaofen-1/2/5/6/7/9/11/12 (only GF-3 SAR is cited), SuperView Neo
 (mass only), GEESat / CentiSpace / Yunhai / Haiyang / Tianhui / Tianmu
 (KeepTrack-only or unpublished), COSMO-SkyMed second gen (`CSG-*`),
-Pelican, Rassvet, Gonets-M, IRIDE HEO/FM (not Eaglet II). Yaogan stays
-`classified_unpublished`. Swarm Technologies SPACEBEE is absent from this
-extract; ESA `SWARM A/B/C` is the `esa_swarm` family. `TERRA` remains an
-exact-name EOS map so TerraSAR-X is matched on `TERRASAR`, not `TERRA`.
+Pelican, Rassvet, Gonets-M, IRIDE HEO/FM (not Eaglet II), COSMOS, QPS-SAR,
+DiskSat, FORMOSAT mix, STRIX. Yaogan stays `classified_unpublished`.
+Swarm Technologies SPACEBEE is absent from this extract; ESA `SWARM A/B/C`
+is the `esa_swarm` family. `TERRA` remains an exact-name EOS map so
+TerraSAR-X is matched on `TERRASAR`, not `TERRA`.
+
+Western leftovers that *did* have a public OML: NASA CYGNSS (`CYGFM`,
+new family), NASA Starling → existing `cubesat_6u`. Planet Flock /
+SkySat, Spire Lemur, Satellogic ÑuSat, and GHGSat were already mapped;
+the leftover table has none of those prefixes.
 
 ## Mapping (name / COSPAR → family)
 
@@ -172,23 +183,59 @@ python scripts/refresh_satcat_snapshot.py
 
 | | n | mapped | named | named % | leftover fallback |
 |---|---:|---:|---:|---:|---|
-| active payloads | 16,870 | 16,870 | 14,323 | **84.9%** | `leo_box_wing` 1,857 |
-| rocket bodies | 2,422 | 2,422 | 2,278 | **94.1%** | `rocket_body` 144 |
+| active payloads | 16,870 | 16,870 | 14,334 | **85.0%** | `leo_box_wing` 1,846 |
+| rocket bodies | 2,422 | 2,422 | 2,290 | **94.5%** | `rocket_body` 132 |
 
-Earlier cuts on the same snapshot: first-pass 82.3% / 25.5%; previous hone
-84.0% / 90.0% (`leo_box_wing` 2,024, generic `rocket_body` 241).
+Earlier cuts on the same snapshot: first-pass 82.3% / 25.5%; then 84.0% /
+90.0%; previous hone 84.9% / 94.1% (`leo_box_wing` 1,857, generic
+`rocket_body` 144). **92** families.
 
-Payload confidence this pass: low 2,493 / medium 8,967 / high 5,410.
+Payload confidence this pass: low 2,482 / medium 8,967 / high 5,421.
 
-Largest leftover payload piles (no public OML, left as `leo_box_wing`):
-COSMOS (111), Jilin-1 (33+), Rassvet-3 (31), Gonets-M (23), CentiSpace (33),
-IRIDE HEO/FM (23), Tianmu-1 (20), SuperView (12), GEESat (~63), Yunhai,
-optical Gaofen, Haiyang, Tianhui, Aether, HJS, SCS-01.
+## Leftover inventory
 
-Largest leftover rocket-body piles (still generic): mixed AKM/PKM (~40,
-sizes differ — not lumped), IABS (9), Minotaur (8), Diamant (5), Japanese
-N/M-V (handful), Taurus, KSLV-II, Lijian-1, H-1/H-3, Epsilon, Volga,
-Falcon 1, New Glenn, SLS, Vanguard.
+`scripts/catalog_leftovers.py` (also `leftover_inventory()`) lists every
+SATCAT prefix still on the fallbacks. Prefix = first whitespace token with
+a trailing serial stripped. **No family is invented from a prefix.**
+
+Top `leo_box_wing` prefixes (1,846 total):
+
+| n | prefix | examples |
+|---:|---|---|
+| 111 | COSMOS | COSMOS 1989 (ETALON 1), COSMOS 2385 |
+| 63 | GEESAT | GEESAT-1 01 |
+| 48 | JILIN | JILIN-1, JILIN-1 03 |
+| 33 | CENTISPACE | CENTISPACE-1 S1 |
+| 31 | RASSVET | RASSVET-3 1 |
+| 30 | GAOFEN | GAOFEN-1, GAOFEN-2 (optical; GF-3 is named) |
+| 23 | GONETS-M | GONETS-M 3 |
+| 20 | TIANMU | TIANMU-1 03 |
+| 18 | YUNHAI | YUNHAI-1 01 |
+| 17 | SHIJIAN | SHIJIAN-6 01A |
+| 15 | IRIDE-MS | IRIDE-MS2-HEO-1 |
+| 14 | TIANHUI | TIANHUI 2-01A |
+| 13 | SUPERVIEW | SUPERVIEW NEO-1 01 |
+| 12 | SJ / HJS / SCS | mixed Chinese leftovers |
+| 11 | QPS-SAR / AETHER / CHUANGXIN | unpublished or mixed OML |
+| 9 | PELICAN / FORMOSAT / CHECKMATE | Planet Pelican unpublished; FORMOSAT-5 ≠ 7 |
+
+Generic `rocket_body` leftovers (**132**; exact names via the script):
+
+| n | names | why still generic |
+|---:|---|---|
+| ~40 | mixed `* AKM` / `* PKM` (Fengyun-2, GOES 1–7, Meteosat, Himawari, Leasat, Lageos, …) | sizes differ — not lumped |
+| 8 | MINOTAUR / MINOTAUR 1 / MINOTAUR 4 | Minotaur I ≠ IV diameter |
+| 7 | OV1-* | 1960s OV1 stages, mixed |
+| 6 / 6 | Japanese N-1/N-2, M-3S/M-4S | not H-IIA 4 m |
+| 5 | DIAMANT | public-ish but mixed B / B-P4 |
+| 4 | TAURUS R/B | Taurus / Minotaur-C mix |
+| 3 | KSLV-II, LIJIAN-1 | no primary stage drawing used here |
+| 2 | H-1, EPSILON, M-V, VANGUARD, VOLGA, … | H-3 is now `h3_upper`; H-1 is not |
+| 1 | FALCON 1, NEW GLENN, SLS, LVM3, … | one-offs; dims exist but not worth a family |
+
+Mapped this pass with public stage dims: `IABS R/B` (9; 2.9×0.68 m disc),
+`H-3 R/B` (2; JAXA 5.27×12 m), `SL-11 R/B` (Tsyklon-2 → existing
+`tsyklon3`).
 
 ## What is unknown (on purpose)
 
@@ -204,7 +251,9 @@ Falcon 1, New Glenn, SLS, Vanguard.
 - Starshield and NRO buses
 - Spacecraft-specific IR α/ε
 - Array 1- vs 2-axis when the public record is silent (called out as a
-  stand-in on Kuiper, Hulianwang, SkySat, Umbra)
+  stand-in on Kuiper, Hulianwang, SkySat, Umbra). OneWeb 1-axis and
+  Starlink v1.5 1-axis / v2 Mini 2-axis match the public record. GEO is
+  2-axis class convention.
 
 Estimator, sensing FOV, and ADCS tracker geometry are not part of this
 catalog.

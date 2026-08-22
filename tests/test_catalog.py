@@ -8,6 +8,7 @@ from photometry.catalog import (
     FAMILIES,
     coverage_report,
     family,
+    leftover_inventory,
     load_snapshot,
     resolve,
     snapshot_meta,
@@ -16,6 +17,8 @@ from photometry.shapes import (
     GIMBAL_1AXIS,
     GIMBAL_2AXIS,
     LIBRARY,
+    iss as study_iss,
+    starlink_v15 as study_starlink_v15,
     starlink_v2mini,
 )
 
@@ -168,6 +171,8 @@ def test_mapping_examples():
         "TOMORROW-S1": "cubesat_6u",
         "FLOCK 4Q-16": "planet_superdove",
         "SNUSAT-2": "cubesat_3u",
+        "CYGFM01": "cygnss",
+        "STARLING 1": "cubesat_6u",
     }
     for name, fam in named.items():
         hit = resolve(name)
@@ -200,7 +205,66 @@ def test_mapping_examples():
     assert resolve("SL-23 R/B", object_type="R/B").family_id == "dnepr"
     assert resolve("THOR ABLESTAR R/B", object_type="R/B").family_id == "thor_ablestar"
     assert resolve("THOR BURNER 2 R/B", object_type="R/B").family_id == "burner2"
+    assert resolve("H-3 R/B", object_type="R/B").family_id == "h3_upper"
+    assert resolve("H-2A R/B", object_type="R/B").family_id == "h2_upper"
+    assert resolve("IABS R/B", object_type="R/B").family_id == "iabs"
+    assert resolve("SL-11 R/B", object_type="R/B").family_id == "tsyklon3"
     assert resolve("STARLINK-1008", launch_date="2019-11-11").confidence == "high"
+
+
+def test_study_library_geometry_not_overwritten():
+    """620 km study meshes stay on shapes.LIBRARY; catalog uses FCC/NASA."""
+    study = study_starlink_v15()
+    study_arr = [study.areas[i] for i, lab in enumerate(study.labels)
+                 if "array" in lab.lower() and study.mirror_of[i] < 0]
+    assert study_arr and abs(study_arr[0] - 8.1 * 2.7) < 1e-6
+    cat = family("starlink_v15")
+    cat_arr = [cat.areas[i] for i, lab in enumerate(cat.labels)
+               if "array" in lab.lower() and cat.mirror_of[i] < 0]
+    assert cat_arr and abs(cat_arr[0] - 8.1 * 2.8) < 1e-6
+    study_i = study_iss()
+    study_cells = sum(study_i.areas[i] for i, lab in enumerate(study_i.labels)
+                      if "arrays" in lab.lower() and study_i.mirror_of[i] < 0)
+    assert abs(study_cells - 2 * 35 * 24) < 1e-6
+    cat_i = family("iss")
+    cat_cells = sum(cat_i.areas[i] for i, lab in enumerate(cat_i.labels)
+                    if "arrays" in lab.lower() and cat_i.mirror_of[i] < 0)
+    assert abs(cat_cells - 2 * 35 * 36) < 1e-6
+
+
+def test_photometry_family_quality():
+    ow = family("oneweb")
+    ys = [v[1] for verts, _ in ow.polygons for v in verts]
+    assert abs(max(ys) - min(ys) - 5.0) < 0.05
+    assert any(ow.gimbal_mode[i] == GIMBAL_1AXIS for i in range(ow.n_facets))
+    sl = family("starlink_v15")
+    assert any(sl.gimbal_mode[i] == GIMBAL_1AXIS for i in range(sl.n_facets))
+    v2 = family("starlink_v2mini")
+    assert any(v2.gimbal_mode[i] == GIMBAL_2AXIS for i in range(v2.n_facets))
+    geo = family("geo_bus")
+    assert any(geo.gimbal_mode[i] == GIMBAL_2AXIS for i in range(geo.n_facets))
+    assert "WHITE_PAINT" in geo.material_class
+    assert "ANTENNA" in geo.material_class
+    assert "CELLS" in geo.material_class
+    ku = family("kuiper")
+    assert ku.dimension_status.get("array_gimbal") == "uncertain"
+    iss_card = family("iss").describe()
+    assert "2-axis" in iss_card
+    assert "radiator" in iss_card.lower() or "deployable" in iss_card
+
+
+def test_leftover_inventory_lists_unpublished_piles():
+    inv = leftover_inventory()
+    prefixes = {row["prefix"]: row["n"] for row in inv["leo_prefixes"]}
+    assert inv["leo_box_wing_n"] == sum(prefixes.values())
+    assert prefixes.get("COSMOS", 0) >= 100
+    assert prefixes.get("GEESAT", 0) >= 50
+    assert prefixes.get("JILIN", 0) >= 30
+    assert "CYGFM" not in prefixes
+    names = {row["name"] for row in inv["rocket_body_names"]}
+    assert "IABS R/B" not in names
+    assert "H-3 R/B" not in names
+    assert any("AKM" in n or "PKM" in n for n in names)
 
 
 def test_coverage_against_vendored_snapshot():

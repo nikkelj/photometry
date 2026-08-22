@@ -85,8 +85,9 @@ def oneweb() -> FacetModel:
     b = _Builder("oneweb")
     b.box((0, 0, 0), bus, MLI, "bus",
           mats=[MLI, MLI, MLI, MLI, MLI, ANTENNA])
-    # 5 m span − 1 m bus = 4 m for two wings → 2.0 m each; height matches bus.
-    _two_wing(b, bus, (1.0, 2.0), gimbal=GIMBAL_1AXIS)
+    # KeepTrack ARROW span 5 m: 1.0 m bus + 2×0.3 m boom + 2×1.7 m wings.
+    # Earlier 2.0 m wings produced 5.6 m tip-to-tip (too long vs the cite).
+    _two_wing(b, bus, (1.0, 1.7), gimbal=GIMBAL_1AXIS)
     b.meta(
         family_id="oneweb",
         sources=("eoPortal OneWeb: Airbus Arrow, ~150 kg, box ~1×1×1.3 m, "
@@ -94,9 +95,14 @@ def oneweb() -> FacetModel:
                  "KeepTrack ARROW bus: span 5 m; SPT-50 or BHT-350 Hall.",
                  ),
         notes="Ku/Ka user/gateway antennas are the nadir (−z) bus face, not a "
-              "separate unfurled dish (size of the phased arrays unpublished).",
+              "separate unfurled dish (size of the phased arrays unpublished). "
+              "Arrays are 1-axis (sun-tracking wings on a nadir-hold bus); "
+              "2-axis is not in the public Arrow/OneWeb record. Cell area "
+              "is a range (chord matches the 1 m bus face; span is the "
+              "5 m tip-to-tip cite minus booms).",
         dimension_status={"bus": STATUS_PUBLIC, "arrays": STATUS_RANGE,
-                          "array_height": STATUS_RANGE,
+                          "array_span": STATUS_PUBLIC,
+                          "array_gimbal": STATUS_PUBLIC,
                           "thrust_vector": STATUS_UNKNOWN},
         thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_EP,
         thrust_notes="Searched Busek/SpaceNews (BHT-350 for EOR, SK, CA, "
@@ -107,13 +113,15 @@ def oneweb() -> FacetModel:
 
 
 def kuiper() -> FacetModel:
-    """Amazon Leo / Project Kuiper. Mass is public; outer dimensions are not.
+    """Amazon Leo / Project Kuiper. Mass is public; production OML is not.
 
-    Photometric stand-in uses the midpoint of a stated range, never a fake
+    Photometric stand-in uses published-range midpoints, never a fake
     'exact' bus. Two wings; 1-axis is a stand-in (1- vs 2-axis unpublished).
     """
-    bus = (2.2, 1.6, 0.7)          # range midpoint, not a drawing
-    panel = (2.2, 4.0)             # span tip-to-tip ~ 1.6+0.6+8 ≈ 10 m class
+    # KeepTrack Kuiper-P1 protoflight: ~2 m box, 10 m span (secondary).
+    # Production stacking photos are the same 2 m / 10 m class.
+    bus = (2.0, 1.6, 0.7)
+    panel = (2.0, 3.9)             # 1.6 + 2×0.3 boom + 2×3.9 = 10.0 m span
     b = _Builder("kuiper")
     b.box((0, 0, 0), bus, MLI, "bus",
           mats=[MLI, MLI, MLI, MLI, MLI, ANTENNA])
@@ -124,11 +132,14 @@ def kuiper() -> FacetModel:
                  "trapezoidal bus + deployable arrays; krypton Hall thruster.",
                  "FCC Kuiper System order (2020) and subsequent public PDFs "
                  "give orbit shells, not outer-mold-line drawings.",
+                 "KeepTrack KUIPER-P1 protoflight (secondary): ~2 m box, "
+                 "10 m span. Not a production drawing.",
                  "SATCAT names KUIPER-#####."),
-        notes="Bus 1.5–3.0 m class and array span ~8–14 m from stacking "
-              "photos/mass, encoded as range midpoints. Gimbal 1-axis is a "
-              "stand-in: 1- vs 2-axis is not in the public record. No "
-              "invented internals.",
+        notes="Bus ~2 m and 10 m span are range midpoints (protoflight / "
+              "stacking class), not a filed OML. Gimbal 1-axis is a "
+              "stand-in: 1- vs 2-axis is not in the public record. Nadir "
+              "(−z) is the user-antenna face (phased-array size unpublished). "
+              "No invented internals.",
         dimension_status={"bus": STATUS_RANGE, "arrays": STATUS_RANGE,
                           "array_gimbal": STATUS_UNCERTAIN,
                           "thrust_vector": STATUS_UNKNOWN},
@@ -328,29 +339,35 @@ def geo_bus() -> FacetModel:
     """Typical 3-axis GEO comms bus (A2100 / Eurostar / 1300 class).
 
     Dimensions are class ranges, not one vehicle. 2-axis arrays; nadir dish.
+    N/S faces are white radiators (GEO class convention); other bus faces MLI.
     """
     bus = (2.5, 2.0, 3.2)
     b = _Builder("geo_bus")
-    b.box((0, 0, 0), bus, MLI, "bus")
-    _two_wing(b, bus, (3.2, 8.0), gimbal=GIMBAL_2AXIS, boom=0.4)
+    # box mats: +x −x +y −y +z −z. ±y = N/S radiators on a nadir-hold bus.
+    b.box((0, 0, 0), bus, MLI, "bus",
+          mats=[MLI, MLI, WHITE_PAINT, WHITE_PAINT, MLI, MLI])
+    # Mid-class 15–30 m span ≈ 22.8 m: 2.0 + 2×0.4 boom + 2×10.0 wings.
+    _two_wing(b, bus, (3.2, 10.0), gimbal=GIMBAL_2AXIS, boom=0.4)
     b.panel((0, 0, -3.2 / 2 - 0.4), (0, 1, 0), (1, 0, 0), 2.5, 2.5,
             ANTENNA, MLI, "nadir dish")
     b.meta(
         family_id="geo_bus",
         sources=("Class convention for 3-axis GEO comms: box bus, 2-axis "
-                 "solar wings, nadir unfurlable / Gregorian antenna. Not a "
-                 "named SSL-1300/A2100 drawing.",
+                 "solar wings, nadir unfurlable / Gregorian antenna, N/S "
+                 "radiator faces. Not a named SSL-1300/A2100 drawing.",
                  "N/S station-keeping is conventionally orbit-normal."),
-        notes="Bus 2–4 m, array span 15–30 m, dish 2–3 m are typical ranges; "
-              "stand-in uses mid-class numbers. Do not treat as a specific GEO.",
+        notes="Bus 2–4 m, array span 15–30 m (stand-in 22.8 m), dish 2–3 m "
+              "are typical ranges. 2-axis arrays are the GEO class default. "
+              "Do not treat as a specific GEO.",
         dimension_status={"bus": STATUS_TYPICAL, "arrays": STATUS_TYPICAL,
                           "dish": STATUS_TYPICAL,
                           "thrust_vector": STATUS_TYPICAL},
         thrust_body=[[0.0, 1.0, 0.0]],
         thrust_attitude=ATT_NADIR, thrust_propulsion=PROP_CHEMICAL,
         thrust_notes="Primary NSSK along +y (orbit normal) is a GEO class "
-                     "convention, not a measured vector on a named satellite. "
-                     "E/W (±x) also exists.",
+                     "convention for chemical/EP station-keeping, not a "
+                     "measured Hall vector on a named satellite. E/W (±x) "
+                     "also exists. Not invented ion pointing.",
     )
     return b.build()
 
@@ -398,6 +415,91 @@ def o3b() -> FacetModel:
                           "thrust_vector": STATUS_UNKNOWN},
         thrust_attitude=ATT_NADIR, thrust_propulsion=PROP_CHEMICAL,
         thrust_notes="Chemical station-keeping typical; vector unpublished.",
+    )
+    return b.build()
+
+
+def starlink_v15_fcc() -> FacetModel:
+    """SATCAT Starlink v1.5 from the cited FCC table.
+
+    `shapes.starlink_v15()` is the 620 km study LIBRARY copy and is not
+    changed. That study mesh used bus y=1.4 m and array chord 2.7 m; the
+    McDowell FCC table is bus 2.8×1.3 m and array 2.8×8.1 m. Catalog
+    mapping uses this FCC stand-in.
+    """
+    b = _Builder("starlink_v15")
+    b.box((0, 0, 0), (2.8, 1.3, 0.2), MLI, "bus",
+          mats=[MLI, MLI, MLI, MLI, MLI, ANTENNA])
+    cx = 2.8 / 2 + 0.3 + 8.1 / 2
+    b.panel((cx, 0, 0), (1, 0, 0), (0, 1, 0), 8.1, 2.8, CELLS, PANEL_BACK,
+            "array", gimbal=GIMBAL_1AXIS, gimbal_axis=(1, 0, 0))
+    b.meta(
+        family_id="starlink_v15",
+        sources=(
+            "Jonathan McDowell, public FCC Gen2 dimensions table: v1.5 bus "
+            "2.8×1.3 m, array 2.8×8.1 m, mass 303 kg "
+            "(https://planet4589.org/astro/starsim/index.html).",
+            "Spaceflight Now 2023-02-26: single ~11 m end-to-end wing on v1.5.",
+            "SpaceX public: krypton/argon ion (Hall-class) propulsion; "
+            "body-frame thrust pointing is not published — left unknown.",
+        ),
+        notes="FCC table (catalog). Study LIBRARY `shapes.starlink_v15` "
+              "keeps the earlier 1.4 / 2.7 m stand-in so 620 km inversion "
+              "stays reproducible. v1.0 lumped with v1.5. 1-axis shoulder "
+              "gimbal. Nadir (−z) is the antenna panel. Cells vs panel-back "
+              "split. Do not treat as Starshield CAD.",
+        dimension_status={"bus": STATUS_PUBLIC, "array": STATUS_PUBLIC,
+                          "array_gimbal": STATUS_PUBLIC,
+                          "thrust_vector": STATUS_UNKNOWN},
+        thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_EP,
+        thrust_notes="Searched SpaceX Gen2 PDF, FCC dimension table, "
+                     "SpaceNews/Spaceflight Now (krypton Hall exists; "
+                     "magnitude only). Everyday Astronaut claims ram-facing "
+                     "but is not a primary SpaceX/FCC citation — vector left "
+                     "empty.",
+    )
+    return b.build()
+
+
+def iss_nasa() -> FacetModel:
+    """SATCAT ISS stand-in using NASA public areas.
+
+    `shapes.iss()` is the 620 km study LIBRARY copy (two 35×24 m array
+    groups = 1,680 m² cells) and is not changed. NASA cites ~2,500 m²
+    of USOS array area and a ~109 m truss; catalog mapping uses that.
+    """
+    b = _Builder("iss")
+    b.box((0, 0, 0), (50, 6, 6), WHITE_PAINT, "modules")
+    b.box((0, 0, 4.5), (5, 109, 3), MLI, "truss")
+    for sign, tag in [(1, "stbd"), (-1, "port")]:
+        # 4 USOS wings of ~35×12 m per side → one 35×36 m photometric group.
+        # 2 × 35 × 36 = 2,520 m² ≈ NASA 27,000 ft² / 2,500 m² class.
+        b.panel((0, sign * 40, 4.5), (sign, 0, 0), (0, sign, 0), 35, 36,
+                CELLS, PANEL_BACK, f"arrays {tag}", gimbal=GIMBAL_2AXIS)
+        b.panel((0, sign * 14, 0), (0, sign, 0), (1, 0, 0), 22, 12,
+                WHITE_PAINT, WHITE_PAINT, f"radiators {tag}",
+                gimbal=GIMBAL_1AXIS, gimbal_axis=(0, 1, 0))
+    b.meta(
+        family_id="iss",
+        sources=(
+            "NASA ISS solar-array article: 27,000 ft² (2,500 m²) USOS "
+            "arrays; 240 ft (73 m) pair wingspan. Each original wing "
+            "~112×39 ft (35×12 m); eight wings → two 35×36 m groups.",
+            "NASA ISS reference: pressurized stack ~50 m class; integrated "
+            "truss ~109 m (358 ft). Arrays on alpha/beta 2-axis; radiators "
+            "on 1-axis. iROSA overlays are not modelled separately.",
+            "Reboost: Progress / Zvezda along +x (velocity) in LVLH.",
+        ),
+        notes="Coarse photometric stand-in, not station CAD. Study LIBRARY "
+              "`shapes.iss` keeps the earlier 35×24 m groups. Catalog uses "
+              "the NASA 2,500 m² class. Radiators are white 1-axis "
+              "deployables, not cells.",
+        dimension_status={"modules": STATUS_RANGE, "truss": STATUS_PUBLIC,
+                          "arrays": STATUS_PUBLIC, "radiators": STATUS_RANGE,
+                          "thrust_vector": STATUS_PUBLIC},
+        thrust_body=[[1.0, 0.0, 0.0]],
+        thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_CHEMICAL,
+        thrust_notes="ISS reboost is publicly along-track (+x in this frame).",
     )
     return b.build()
 

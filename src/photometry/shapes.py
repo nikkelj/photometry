@@ -191,8 +191,9 @@ class FacetModel:
         by_role = {"bus": [], "array": [], "deployable": [], "other": []}
         for i, lab in enumerate(self.labels):
             low = lab.lower()
-            if any(k in low for k in ("array", "panel", "cells", "wing",
-                                      "radiator")):
+            if "radiator" in low:
+                role = "deployable"
+            elif any(k in low for k in ("array", "panel", "cells", "wing")):
                 role = "array"
             elif any(k in low for k in ("antenna", "dtc", "dish", "sar",
                                         "boom", "capture")):

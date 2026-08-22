@@ -91,7 +91,17 @@ FAMILIES: dict[str, Callable[[], FacetModel]] = {
     "dnepr": _p3.dnepr,
     "thor_ablestar": _p3.thor_ablestar,
     "burner2": _p3.burner2,
+    "cygnss": _p3.cygnss,
+    "h3_upper": _p3.h3_upper,
+    "iabs": _p3.iabs,
 }
+
+
+# Study LIBRARY factories stay on shapes.LIBRARY. Catalog SATCAT mapping
+# uses the FCC / NASA numbers for the two families that dominate LEO
+# photometry (v1.5 array chord and ISS array area).
+FAMILIES["starlink_v15"] = _fam.starlink_v15_fcc
+FAMILIES["iss"] = _fam.iss_nasa
 
 
 def family(family_id: str) -> FacetModel:
