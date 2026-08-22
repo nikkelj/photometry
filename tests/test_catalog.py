@@ -556,3 +556,57 @@ def test_hinge_does_not_rewrite_rest_pose_polygons():
     after = [v for v, _ in m.polygons]
     for a, b in zip(before, after):
         assert np.allclose(a, b)
+
+
+def _lvlh_zenith_phase(phase_deg: float):
+    """Observer nadir, sun in body +x/−z. Phase = angle(u_sun, u_obs)."""
+    a = np.deg2rad(phase_deg)
+    u_obs = unit(np.array([[0.0, 0.0, -1.0]]))
+    u_sun = unit(np.array([[np.sin(a), 0.0, -np.cos(a)]]))
+    return u_sun, u_obs
+
+
+def test_starlink_catalog_magnitude_order_vs_mallama():
+    """Order-of-magnitude vs published Starlink mags — not a fit.
+
+    Catalog families already feed `radiometry.apparent_magnitude`. This
+    locks two LVLH-hold geometries (observer nadir, sun in xz, arrays
+    articulated) against Mallama's cited numbers with a wide window.
+
+    Mallama et al. arXiv:2210.17268 — *characteristic magnitude* is the
+    average overhead brightness at end of astronomical twilight: phase
+    72°, range reduced to 550 km. Published Gen 1: Original 4.7, VisorSat
+    6.2, Post-VisorSat 5.5.
+
+    Mallama et al. arXiv:2306.06657 — v2 Mini early-orbit (no brightness
+    mitigation) mean 1000-km magnitude 5.08; on-station mitigation 7.87.
+    Inverse-square 550↔1000 km is 1.30 mag, so unmitigated ~3.8 at 550 km.
+    Mitigation attitude and visors are not in this catalog; do not compare
+    to 7.87 or retune CELLS/MLI to match.
+    """
+    from photometry.radiometry import apparent_magnitude
+
+    rng = np.array([550.0])
+
+    def mag_at(family_id: str, phase_deg: float) -> float:
+        m = family(family_id)
+        u_sun, u_obs = _lvlh_zenith_phase(phase_deg)
+        n = m.body_normals(u_sun, articulate=True)
+        return float(apparent_magnitude(m, u_sun, u_obs, rng, normals=n)[0])
+
+    v15_72 = mag_at("starlink_v15", 72.0)
+    v2_72 = mag_at("starlink_v2mini", 72.0)
+    # ~4 mag around the published unmitigated cluster (Gen 1 4.7–6.2;
+    # Mini early-orbit ~3.8 at 550 km). Clip-floor in radiometry is ~48.
+    assert 1.0 < v15_72 < 9.0
+    assert 0.5 < v2_72 < 8.0
+    assert v2_72 < v15_72  # FCC v2 Mini area is larger
+    v15_40 = mag_at("starlink_v15", 40.0)
+    v2_40 = mag_at("starlink_v2mini", 40.0)
+    assert v15_40 < v15_72
+    assert v2_40 < v2_72
+    # Range-reduced 1000-km magnitudes (Mallama 2111.09735: Original 5.89,
+    # VisorSat 7.21). Same pose; inverse-square only.
+    dm = 5.0 * np.log10(1000.0 / 550.0)
+    assert 2.5 < v15_72 + dm < 10.5
+    assert 1.5 < v2_72 + dm < 9.5
