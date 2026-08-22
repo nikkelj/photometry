@@ -1,0 +1,152 @@
+"""Facet catalog: family builders, articulation, thrust, SATCAT coverage."""
+
+import numpy as np
+import pytest
+
+from photometry.frames import unit
+from photometry.catalog import (
+    FAMILIES,
+    coverage_report,
+    family,
+    load_snapshot,
+    resolve,
+    snapshot_meta,
+)
+from photometry.shapes import (
+    GIMBAL_1AXIS,
+    GIMBAL_2AXIS,
+    LIBRARY,
+    starlink_v2mini,
+)
+
+STUDY_LIBRARY = {
+    "box_wing", "rocket_body", "starlink_v15", "starlink_v2mini",
+    "starlink_v2mini_dtc", "bluewalker3", "hubble", "iss", "katalyst_link",
+}
+
+
+def test_study_library_keys_unchanged():
+    assert set(LIBRARY) == STUDY_LIBRARY
+
+
+def test_every_family_builds():
+    for name in FAMILIES:
+        m = family(name)
+        assert m.n_facets >= 2, name
+        assert np.allclose(np.linalg.norm(m.normals, axis=-1), 1), name
+        assert np.all(m.areas > 0), name
+        assert len(m.labels) == m.n_facets, name
+        assert len(m.material_class) == m.n_facets, name
+        assert all(m.material_class), name
+        assert len(m.optical_provenance) == m.n_facets, name
+        assert len(m.ir_provenance) == m.n_facets, name
+        assert m.alpha_ir.shape == (m.n_facets,)
+        assert m.epsilon_ir.shape == (m.n_facets,)
+        assert m.family_id
+        assert m.sources, name
+        for i in range(m.n_facets):
+            if m.mirror_of[i] >= 0:
+                assert np.allclose(m.normals[i], -m.normals[m.mirror_of[i]]), name
+
+
+def test_oneaxis_and_twoaxis_articulation():
+    u_sun = unit(np.array([[0.4, -0.5, 0.77], [0.9, 0.1, 0.42]]))
+    m2 = family("starlink_v2mini")
+    n = m2.body_normals(u_sun, articulate=True)
+    saw2 = False
+    for i in range(m2.n_facets):
+        if m2.gimbal_mode[i] == GIMBAL_2AXIS and m2.mirror_of[i] < 0:
+            assert np.allclose(n[i], u_sun)
+            saw2 = True
+    assert saw2
+    m1 = family("oneweb")
+    n = m1.body_normals(u_sun, articulate=True)
+    saw1 = False
+    for i in range(m1.n_facets):
+        if m1.gimbal_mode[i] == GIMBAL_1AXIS and m1.mirror_of[i] < 0:
+            g = m1.gimbal_axis[i]
+            assert np.allclose(n[i] @ g, 0, atol=1e-12)
+            assert np.all(np.einsum("kj,kj->k", n[i], u_sun) > 0)
+            saw1 = True
+    assert saw1
+    # BlueWalker-class arrays stay fixed
+    bw = family("bluewalker3")
+    assert not bw.articulated
+
+
+def test_thrust_vectors_unit_and_documented():
+    for name in FAMILIES:
+        m = family(name)
+        assert m.thrust_attitude, name
+        assert m.thrust_propulsion, name
+        assert m.thrust_notes, name
+        if len(m.thrust_body) == 0:
+            continue
+        nrm = np.linalg.norm(m.thrust_body, axis=1)
+        assert np.allclose(nrm, 1.0), name
+        assert m.thrust_body.shape[1] == 3
+
+
+def test_reviewer_card_starlink_v2mini():
+    m = starlink_v2mini()
+    card = m.describe()
+    assert "starlink_v2mini" in card
+    assert "2-axis" in card
+    assert "thrust" in card.lower()
+    assert any(c == "MLI" for c in m.material_class)
+    assert any(c == "CELLS" for c in m.material_class)
+    assert m.thrust_propulsion == "ep"
+    dtc = starlink_v2mini(dtc=True)
+    assert any("dtc" in lab.lower() for lab in dtc.labels)
+    assert dtc.family_id == "starlink_v2mini_dtc"
+
+
+def test_iss_thrust_is_lvlh_plus_x():
+    m = family("iss")
+    assert m.thrust_attitude == "lvlh"
+    assert np.allclose(m.thrust_body, [[1.0, 0.0, 0.0]])
+
+
+def test_mapping_examples():
+    assert resolve("STARLINK-11072 [DTC]").family_id == "starlink_v2mini_dtc"
+    assert resolve("STARLINK-1008", launch_date="2019-11-11").family_id == "starlink_v15"
+    assert resolve("STARLINK-30000", launch_date="2024-01-01").family_id == "starlink_v2mini"
+    assert resolve("ONEWEB-0560").family_id == "oneweb"
+    assert resolve("KUIPER-00008").family_id == "kuiper"
+    assert resolve("QIANFAN-1").family_id == "qianfan"
+    assert resolve("FLOCK 4Q-16").family_id == "planet_superdove"
+    assert resolve("SKYSAT-A").family_id == "planet_skysat"
+    assert resolve("ICEYE-X2").family_id == "iceye"
+    assert resolve("IRIDIUM 106").family_id == "iridium_next"
+    assert resolve("ISS (ZARYA)").family_id == "iss"
+    assert resolve("HST").family_id == "hubble"
+    assert resolve("LINK", cospar="2026-152A").family_id == "katalyst_link"
+    assert resolve("FALCON 9 R/B", object_type="R/B").family_id == "falcon9_s2"
+    assert resolve("INTELSAT 902 (IS-902)", period_min=1436.0).family_id == "geo_bus"
+    assert resolve("NAVSTAR 82 (USA 343)").family_id == "gnss_meo"
+    assert resolve("USA 105").family_id == "classified_unpublished"
+    # Starshield internals are not invented
+    assert resolve("USA 105").notes.lower().find("starshield") >= 0
+
+
+def test_coverage_against_vendored_snapshot():
+    meta = snapshot_meta()
+    assert meta["snapshot_utc"] == "2026-08-21"
+    rows = load_snapshot()
+    assert len(rows) == meta["n_rows"]
+    report = coverage_report(rows)
+    pay = report["active_payloads"]
+    assert pay["n"] == meta["n_active_payloads"]
+    assert pay["fraction"] >= 0.99
+    # Starlink alone is ~65% of the active catalog; named families must beat that.
+    assert pay["fraction_named"] > 0.70
+    assert report["rocket_bodies"]["fraction"] >= 0.99
+    assert not report["mapped_to_unknown_family"]
+    assert "starlink_v2mini" in pay["by_family"]
+    assert "oneweb" in pay["by_family"]
+    assert "kuiper" in pay["by_family"]
+
+
+def test_unknown_family_raises():
+    with pytest.raises(KeyError):
+        family("not_a_real_family")

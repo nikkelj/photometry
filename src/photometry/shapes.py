@@ -7,7 +7,7 @@ photometric stand-ins, not engineering CAD: facet areas, normals, and
 material classes are what the forward model consumes.
 
 Body-frame convention for all library models (matches LVLH-hold attitude):
-+x along-track (velocity), +y cross-track (orbit normal), +z zenith.
+    +x along-track (velocity), +y cross-track (orbit normal), +z zenith.
 
 Articulation: each facet carries a gimbal mode —
   GIMBAL_FIXED   normal fixed in the body frame
@@ -16,6 +16,11 @@ Articulation: each facet carries a gimbal mode —
   GIMBAL_2AXIS   normal points at the sun exactly (shoulder + wrist)
 A facet with mirror_of >= 0 is the back side of another facet and always
 carries the opposite of its partner's current normal.
+
+Catalog extensions (optional; unused by the 620 km study forward model):
+  per-facet material class + IR α/ε (NaN = unknown), body-frame thrust
+  unit vectors vs the nominal flight attitude they are defined against,
+  and source / dimension-status metadata. See `photometry.catalog`.
 """
 
 from __future__ import annotations
@@ -31,6 +36,9 @@ GIMBAL_1AXIS = 1
 GIMBAL_2AXIS = 2
 
 # material presets: (diffuse albedo, specular coefficient, Phong exponent)
+# Optical numbers are assumed photometric stand-ins (not spacecraft-measured)
+# unless a family notes otherwise. IR α/ε are unknown at the spacecraft
+# level; handbook class values live in photometry.catalog.materials.
 MLI = (0.30, 0.10, 30.0)
 MLI_SILVER = (0.35, 0.35, 60.0)
 CELLS = (0.06, 0.55, 800.0)
@@ -38,6 +46,36 @@ PANEL_BACK = (0.35, 0.02, 10.0)
 WHITE_PAINT = (0.85, 0.03, 15.0)
 ANTENNA = (0.20, 0.30, 100.0)
 DARK = (0.10, 0.02, 10.0)
+
+PRESET_CLASS = {
+    MLI: "MLI",
+    MLI_SILVER: "MLI_SILVER",
+    CELLS: "CELLS",
+    PANEL_BACK: "PANEL_BACK",
+    WHITE_PAINT: "WHITE_PAINT",
+    ANTENNA: "ANTENNA",
+    DARK: "DARK",
+}
+
+# Nominal flight attitudes a thrust vector may be defined against.
+ATT_LVLH = "lvlh"                 # +x ram, +y orbit-normal, +z zenith
+ATT_NADIR = "nadir"               # Earth-pointing; body +z or -z as noted
+ATT_SUN_TRACK = "sun_track"
+ATT_YAW_STEER = "yaw_steering"    # GNSS-class
+ATT_STAGE_AXIS = "stage_axis"     # cylinder +z; on-orbit attitude uncontrolled
+ATT_UNKNOWN = "unknown"
+
+PROP_EP = "ep"
+PROP_CHEMICAL = "chemical"
+PROP_NONE = "none"
+PROP_UNKNOWN = "unknown"
+
+# Dimension / pointing provenance (never a fake precise number).
+STATUS_PUBLIC = "public"
+STATUS_RANGE = "range"          # numeric stand-in is a published range midpoint
+STATUS_UNCERTAIN = "uncertain"
+STATUS_UNKNOWN = "unknown"
+STATUS_TYPICAL = "typical_class"  # class convention, not this spacecraft
 
 
 @dataclass
@@ -60,6 +98,21 @@ class FacetModel:
     mirror_of: np.ndarray = None
     polygons: list = field(default_factory=list)
     name: str = "unnamed"
+    # per-facet surface identity (optical BRDF is still rho_d/k_s/n_ph)
+    material_class: list[str] = field(default_factory=list)
+    alpha_ir: np.ndarray = None          # NaN = unknown
+    epsilon_ir: np.ndarray = None        # NaN = unknown
+    optical_provenance: list[str] = field(default_factory=list)
+    ir_provenance: list[str] = field(default_factory=list)
+    # body-frame thrust; empty (0,3) means pointing unknown / none
+    thrust_body: np.ndarray = None
+    thrust_attitude: str = ATT_UNKNOWN
+    thrust_propulsion: str = PROP_UNKNOWN
+    thrust_notes: str = ""
+    family_id: str = ""
+    sources: tuple[str, ...] = ()
+    notes: str = ""
+    dimension_status: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         f = len(self.areas)
@@ -69,6 +122,23 @@ class FacetModel:
             self.gimbal_axis = np.tile([1.0, 0.0, 0.0], (f, 1))
         if self.mirror_of is None:
             self.mirror_of = np.full(f, -1, dtype=int)
+        if self.alpha_ir is None:
+            self.alpha_ir = np.full(f, np.nan)
+        if self.epsilon_ir is None:
+            self.epsilon_ir = np.full(f, np.nan)
+        if self.thrust_body is None:
+            self.thrust_body = np.zeros((0, 3))
+        if len(self.material_class) != f:
+            self.material_class = list(self.material_class) + ["unspecified"] * (
+                f - len(self.material_class))
+        if len(self.optical_provenance) != f:
+            self.optical_provenance = list(self.optical_provenance) + [
+                "assumed"] * (f - len(self.optical_provenance))
+        if len(self.ir_provenance) != f:
+            self.ir_provenance = list(self.ir_provenance) + ["unknown"] * (
+                f - len(self.ir_provenance))
+        if not self.family_id:
+            self.family_id = self.name
 
     @property
     def n_facets(self) -> int:
@@ -110,6 +180,69 @@ class FacetModel:
             return float(np.sqrt(self.areas.max()))
         return float(max(np.abs(v).max() for v, _ in self.polygons))
 
+    def gimbal_name(self, i: int) -> str:
+        return {GIMBAL_FIXED: "fixed", GIMBAL_1AXIS: "1-axis",
+                GIMBAL_2AXIS: "2-axis"}.get(int(self.gimbal_mode[i]), "?")
+
+    def describe(self) -> str:
+        """Catalog card: bus / arrays / deployables / thrust / materials."""
+        lines = [f"{self.name}  (family {self.family_id or self.name})",
+                 f"  facets: {self.n_facets}"]
+        by_role = {"bus": [], "array": [], "deployable": [], "other": []}
+        for i, lab in enumerate(self.labels):
+            low = lab.lower()
+            if any(k in low for k in ("array", "panel", "cells", "wing",
+                                      "radiator")):
+                role = "array"
+            elif any(k in low for k in ("antenna", "dtc", "dish", "sar",
+                                        "boom", "capture")):
+                role = "deployable"
+            elif any(k in low for k in ("bus", "tube", "module", "truss",
+                                        "stage")):
+                role = "bus"
+            else:
+                role = "other"
+            by_role[role].append(i)
+        for role, idxs in by_role.items():
+            if not idxs:
+                continue
+            fronts = [i for i in idxs if self.mirror_of[i] < 0]
+            gmodes = sorted({self.gimbal_name(i) for i in fronts})
+            mats = sorted({self.material_class[i] for i in idxs})
+            area = float(sum(self.areas[i] for i in fronts))
+            lines.append(
+                f"  {role}: {len(fronts)} front facets, {area:.2f} m^2, "
+                f"gimbal {','.join(gmodes)}, materials {','.join(mats)}")
+        if len(self.thrust_body) == 0:
+            lines.append(
+                f"  thrust: pointing {STATUS_UNKNOWN}; "
+                f"propulsion={self.thrust_propulsion}; "
+                f"attitude={self.thrust_attitude}")
+        else:
+            vecs = " ".join(
+                "[" + ",".join(f"{x:.3f}" for x in v) + "]"
+                for v in self.thrust_body)
+            lines.append(
+                f"  thrust body-frame {vecs} vs {self.thrust_attitude}; "
+                f"propulsion={self.thrust_propulsion}")
+        if self.thrust_notes:
+            lines.append(f"  thrust notes: {self.thrust_notes}")
+        n_ir = int(np.sum(~np.isnan(self.alpha_ir)))
+        lines.append(
+            f"  surfaces: all {self.n_facets} facets have material class + "
+            f"Lambert-Phong (rho_d, k_s, n_ph); IR α/ε known on {n_ir}/"
+            f"{self.n_facets} (else unknown)")
+        if self.dimension_status:
+            bits = ", ".join(f"{k}={v}" for k, v in self.dimension_status.items())
+            lines.append(f"  dimension status: {bits}")
+        if self.sources:
+            lines.append("  sources:")
+            for s in self.sources:
+                lines.append(f"    - {s}")
+        if self.notes:
+            lines.append(f"  notes: {self.notes}")
+        return "\n".join(lines)
+
 
 class _Builder:
     def __init__(self, name: str):
@@ -119,19 +252,62 @@ class _Builder:
         self.labels = []
         self.gmode, self.gaxis, self.mirror = [], [], []
         self.polygons = []
+        self.material_class, self.optical_prov, self.ir_prov = [], [], []
+        self.alpha_ir, self.epsilon_ir = [], []
+        self.family_id = name
+        self.sources: tuple[str, ...] = ()
+        self.notes = ""
+        self.dimension_status: dict = {}
+        self.thrust_body = np.zeros((0, 3))
+        self.thrust_attitude = ATT_UNKNOWN
+        self.thrust_propulsion = PROP_UNKNOWN
+        self.thrust_notes = ""
+
+    def meta(self, *, family_id: str | None = None, sources=(), notes: str = "",
+             dimension_status: dict | None = None, thrust_body=None,
+             thrust_attitude: str = ATT_UNKNOWN,
+             thrust_propulsion: str = PROP_UNKNOWN,
+             thrust_notes: str = "") -> "_Builder":
+        if family_id is not None:
+            self.family_id = family_id
+        self.sources = tuple(sources)
+        self.notes = notes
+        self.dimension_status = dict(dimension_status or {})
+        if thrust_body is None:
+            self.thrust_body = np.zeros((0, 3))
+        else:
+            tb = np.asarray(thrust_body, dtype=float).reshape(-1, 3)
+            nrm = np.linalg.norm(tb, axis=1, keepdims=True)
+            self.thrust_body = np.divide(tb, nrm, out=np.zeros_like(tb),
+                                         where=nrm > 0)
+        self.thrust_attitude = thrust_attitude
+        self.thrust_propulsion = thrust_propulsion
+        self.thrust_notes = thrust_notes
+        return self
 
     def facet(self, normal, area, mat, label, gimbal=GIMBAL_FIXED,
-              gimbal_axis=(1, 0, 0), mirror_of=-1, polygon=None) -> int:
+              gimbal_axis=(1, 0, 0), mirror_of=-1, polygon=None,
+              material_class: str | None = None,
+              optical_provenance: str = "assumed",
+              alpha_ir: float | None = None, epsilon_ir: float | None = None,
+              ir_provenance: str = "unknown") -> int:
         i = len(self.areas)
         self.normals.append(unit(np.asarray(normal, dtype=float)))
         self.areas.append(float(area))
-        self.rho_d.append(mat[0])
-        self.k_s.append(mat[1])
-        self.n_ph.append(mat[2])
+        tup = tuple(mat) if not isinstance(mat, tuple) else mat
+        self.rho_d.append(float(tup[0]))
+        self.k_s.append(float(tup[1]))
+        self.n_ph.append(float(tup[2]))
         self.labels.append(label)
         self.gmode.append(gimbal)
         self.gaxis.append(unit(np.asarray(gimbal_axis, dtype=float)))
         self.mirror.append(mirror_of)
+        cls = material_class or PRESET_CLASS.get(tup, PRESET_CLASS.get(mat, "custom"))
+        self.material_class.append(cls)
+        self.optical_prov.append(optical_provenance)
+        self.alpha_ir.append(np.nan if alpha_ir is None else float(alpha_ir))
+        self.epsilon_ir.append(np.nan if epsilon_ir is None else float(epsilon_ir))
+        self.ir_prov.append(ir_provenance)
         if polygon is not None:
             self.polygons.append((np.asarray(polygon, dtype=float), i))
         return i
@@ -209,6 +385,19 @@ class _Builder:
             mirror_of=np.array(self.mirror, dtype=int),
             polygons=self.polygons,
             name=self.name,
+            material_class=list(self.material_class),
+            alpha_ir=np.array(self.alpha_ir, dtype=float),
+            epsilon_ir=np.array(self.epsilon_ir, dtype=float),
+            optical_provenance=list(self.optical_prov),
+            ir_provenance=list(self.ir_prov),
+            thrust_body=np.array(self.thrust_body, dtype=float).reshape(-1, 3),
+            thrust_attitude=self.thrust_attitude,
+            thrust_propulsion=self.thrust_propulsion,
+            thrust_notes=self.thrust_notes,
+            family_id=self.family_id,
+            sources=self.sources,
+            notes=self.notes,
+            dimension_status=dict(self.dimension_status),
         )
 
 
@@ -227,6 +416,15 @@ def box_wing(
     cx = box_dims_m[0] / 2 + 0.3 + side / 2
     b.panel((cx, 0, 0), (0, 0, -1), (0, 1, 0), side, side, CELLS, PANEL_BACK,
             "panel")
+    b.meta(
+        family_id="box_wing",
+        sources=("Generic test article used in the round-1 baseline; not a "
+                 "flight vehicle."),
+        notes="Defunct box-wing stand-in for inversion tests.",
+        dimension_status={"bus": STATUS_TYPICAL, "arrays": STATUS_TYPICAL},
+        thrust_attitude=ATT_UNKNOWN, thrust_propulsion=PROP_UNKNOWN,
+        thrust_notes="No public vehicle; thrust unknown by construction.",
+    )
     return b.build()
 
 
@@ -236,6 +434,17 @@ def rocket_body(length_m: float = 8.0, diameter_m: float = 2.4,
     b = _Builder("rocket_body")
     b.prism((0, 0, 0), (0, 0, 1), length_m, diameter_m, n_side_facets,
             MLI_SILVER, (MLI, DARK), "stage")
+    b.meta(
+        family_id="rocket_body",
+        sources=("Generic cylindrical upper-stage stand-in; specific stages "
+                 "are in photometry.catalog (falcon9_s2, cz_upper, …)."),
+        dimension_status={"stage": STATUS_TYPICAL},
+        thrust_body=[[0.0, 0.0, -1.0]],
+        thrust_attitude=ATT_STAGE_AXIS,
+        thrust_propulsion=PROP_CHEMICAL,
+        thrust_notes="Engine along −z of the cylinder; spent-stage attitude "
+                     "is typically uncontrolled.",
+    )
     return b.build()
 
 
@@ -252,6 +461,23 @@ def starlink_v15() -> FacetModel:
     cx = 2.8 / 2 + 0.3 + 8.1 / 2
     b.panel((cx, 0, 0), (1, 0, 0), (0, 1, 0), 8.1, 2.7, CELLS, PANEL_BACK,
             "array", gimbal=GIMBAL_1AXIS, gimbal_axis=(1, 0, 0))
+    b.meta(
+        family_id="starlink_v15",
+        sources=(
+            "Jonathan McDowell, public FCC Gen2 dimensions table: v1.5 bus "
+            "2.8×1.3 m, array 2.8×8.1 m, mass 303 kg "
+            "(https://planet4589.org/astro/starsim/index.html).",
+            "Spaceflight Now 2023-02-26: single ~11 m end-to-end wing on v1.5.",
+            "SpaceX public: krypton/argon ion (Hall-class) propulsion; "
+            "body-frame thrust pointing is not published — left unknown.",
+        ),
+        notes="v1.0 lumped with v1.5 (bus width publicly quoted 1.3–1.4 m). "
+              "Nadir face is the antenna panel. Do not treat as Starshield CAD.",
+        dimension_status={"bus": STATUS_PUBLIC, "array": STATUS_PUBLIC,
+                          "thrust_vector": STATUS_UNKNOWN},
+        thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_EP,
+        thrust_notes="EP is public; Hall/ion pointing vs LVLH is not published.",
+    )
     return b.build()
 
 
@@ -271,6 +497,30 @@ def starlink_v2mini(dtc: bool = False) -> FacetModel:
         cx = -(4.1 / 2 + 0.2 + 2.0 / 2)
         b.panel((cx, 0, -0.4), (0, 1, 0), (1, 0, 0), 2.3, 2.0, ANTENNA, MLI,
                 "dtc antenna")  # front normal -z (nadir)
+    b.meta(
+        family_id="starlink_v2mini_dtc" if dtc else "starlink_v2mini",
+        sources=(
+            "Jonathan McDowell / SpaceX FCC Gen2: v2 Mini bus 4.1×2.7 m, "
+            "each array 4.1×12.8 m, mass ~800 kg "
+            "(https://planet4589.org/astro/starsim/index.html).",
+            "Spaceflight Now 2023-02-26: two wings, ~30 m tip-to-tip, "
+            "116 m² class surface area.",
+            "Mallama et al. arXiv:2306.06657 (photometric characterization).",
+            "Celestrak SATCAT tags some vehicles [DTC]; DTC panel size is an "
+            "observer-scale stand-in, not a SpaceX drawing.",
+            "SpaceX public: argon/krypton ion propulsion; thrust pointing "
+            "unpublished — left unknown. No Starshield internals.",
+        ),
+        notes="Two 2-axis arrays. DTC is a nadir-facing deployable only when "
+              "dtc=True. Dimensions are the public FCC table, not internals.",
+        dimension_status={
+            "bus": STATUS_PUBLIC, "arrays": STATUS_PUBLIC,
+            "thrust_vector": STATUS_UNKNOWN,
+            **({"dtc_antenna": STATUS_RANGE} if dtc else {}),
+        },
+        thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_EP,
+        thrust_notes="EP is public; body-frame thrust vector is not published.",
+    )
     return b.build()
 
 
@@ -282,6 +532,20 @@ def bluewalker3() -> FacetModel:
     b.panel((0, 0, 0), (0, 1, 0), (1, 0, 0), 8.0, 8.0, ANTENNA, CELLS,
             "phased array")  # front normal -z (nadir antenna), back +z cells
     b.box((0, 0, 0.9), (1.5, 1.5, 1.5), MLI, "bus")
+    b.meta(
+        family_id="bluewalker3",
+        sources=(
+            "AST SpaceMobile public: BlueWalker 3 ~64 m² (8×8 m) unfurled "
+            "phased array (company/press kit, 2022–2023).",
+            "Mallama & Cole, brightness of BlueWalker 3.",
+        ),
+        notes="Array is GIMBAL_FIXED (BlueWalker-class). Bus size is a coarse "
+              "stand-in behind the sheet. Thrust pointing unpublished.",
+        dimension_status={"array": STATUS_PUBLIC, "bus": STATUS_RANGE,
+                          "thrust_vector": STATUS_UNKNOWN},
+        thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_UNKNOWN,
+        thrust_notes="Propulsion type and body-frame pointing not published.",
+    )
     return b.build()
 
 
@@ -296,6 +560,20 @@ def hubble() -> FacetModel:
         b.panel((0, cy, 0), (1, 0, 0), (0, sign, 0), 2.6, 7.1, CELLS,
                 PANEL_BACK, f"array {tag}", gimbal=GIMBAL_1AXIS,
                 gimbal_axis=(0, 1, 0))
+    b.meta(
+        family_id="hubble",
+        sources=(
+            "NASA HST fact sheets: OTA tube 13.2 m × 4.2 m diameter.",
+            "STIS/NICMOS-era rigid solar arrays ~7.1×2.6 m on ±y booms "
+            "(NASA drawings / public photography).",
+        ),
+        notes="No orbit-raising propulsion in the current mission; RCS only. "
+              "Optical axis is +x (not LVLH ram when in science pointing).",
+        dimension_status={"tube": STATUS_PUBLIC, "arrays": STATUS_PUBLIC,
+                          "thrust_vector": STATUS_UNKNOWN},
+        thrust_attitude=ATT_UNKNOWN, thrust_propulsion=PROP_NONE,
+        thrust_notes="No operational Δv thruster; RCS only. Vector omitted.",
+    )
     return b.build()
 
 
@@ -317,6 +595,22 @@ def katalyst_link() -> FacetModel:
         b.panel((0, cy, 0), (1, 0, 0), (0, sign, 0), 1.8, 2.2, CELLS,
                 PANEL_BACK, f"array {tag}", gimbal=GIMBAL_1AXIS,
                 gimbal_axis=(0, 1, 0))
+    b.meta(
+        family_id="katalyst_link",
+        sources=(
+            "Katalyst Space Technologies LINK / Swift reboost public notes "
+            "(launch 2026-07-03): ~425 kg servicer, bus described as a "
+            "large mini-fridge, ~4 kW / ~6 m tip-to-tip arrays.",
+            "SATCAT name LINK, COSPAR 2026-152A.",
+        ),
+        notes="Capture mechanism on +x. Array area from public kW-class "
+              "power, not a drawing. Thrust vector not published.",
+        dimension_status={"bus": STATUS_RANGE, "arrays": STATUS_RANGE,
+                          "thrust_vector": STATUS_UNKNOWN},
+        thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_UNKNOWN,
+        thrust_notes="Servicer propulsion exists operationally; body-frame "
+                     "vector is not in the public record.",
+    )
     return b.build()
 
 
@@ -333,6 +627,22 @@ def iss() -> FacetModel:
         b.panel((0, sign * 14, 0), (0, sign, 0), (1, 0, 0), 22, 12,
                 WHITE_PAINT, WHITE_PAINT, f"radiators {tag}",
                 gimbal=GIMBAL_1AXIS, gimbal_axis=(0, 1, 0))
+    b.meta(
+        family_id="iss",
+        sources=(
+            "NASA ISS reference: module stack ~50 m, truss ~100 m, main "
+            "solar arrays ~2500 m² class (here two 35×24 m groups), "
+            "radiators on 1-axis gimbals, arrays on alpha/beta 2-axis.",
+            "Reboost: Progress / Zvezda along +x (velocity) in LVLH.",
+        ),
+        notes="Coarse photometric stand-in, not station CAD.",
+        dimension_status={"modules": STATUS_RANGE, "truss": STATUS_RANGE,
+                          "arrays": STATUS_RANGE, "radiators": STATUS_RANGE,
+                          "thrust_vector": STATUS_PUBLIC},
+        thrust_body=[[1.0, 0.0, 0.0]],
+        thrust_attitude=ATT_LVLH, thrust_propulsion=PROP_CHEMICAL,
+        thrust_notes="ISS reboost is publicly along-track (+x in this frame).",
+    )
     return b.build()
 
 

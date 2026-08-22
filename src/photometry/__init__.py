@@ -9,12 +9,13 @@ real tracklet data can be loaded into the same schema and run through the
 identical inversion code paths.
 """
 
-from . import frames, constellation, shapes, attitude, radiometry, sensing, measurements, simulate
+from . import frames, constellation, shapes, catalog, attitude, radiometry, sensing, measurements, simulate
 
 __all__ = [
     "frames",
     "constellation",
     "shapes",
+    "catalog",
     "attitude",
     "radiometry",
     "sensing",
