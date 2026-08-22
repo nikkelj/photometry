@@ -42,6 +42,7 @@ _EXACT_NAME = {
     "TERRA": "terra",
     "AQUA": "terra",
     "SUOMI NPP": "jpss",
+    "PAZ": "terrasat_x",
 }
 _EXACT_COSPAR = {
     "1998-067A": "iss",       # Zarya / ISS
@@ -65,6 +66,19 @@ _NAME_RULES: list[tuple[str, str, str, str, str]] = [
     ("planet_superdove", "prefix", "FLOCK", "high", "Planet Dove / SuperDove"),
     ("planet_skysat", "prefix", "SKYSAT", "high", "Planet SkySat"),
     ("iceye", "prefix", "ICEYE", "high", "ICEYE SAR"),
+    ("terrasat_x", "prefix", "TERRASAR", "high", "DLR hex + 5×0.8 m SAR"),
+    ("terrasat_x", "prefix", "TANDEM-X", "high", "TerraSAR-X twin"),
+    ("cosmo_skymed", "prefix", "COSMO-SKYMED", "high", "first-gen CSK; not CSG"),
+    ("alos2", "prefix", "ALOS-", "high", "JAXA ALOS-2/4"),
+    ("alos2", "prefix", "ALOS ", "high", ""),
+    ("radarsat2", "prefix", "RADARSAT-2", "high", ""),
+    ("gaofen3", "prefix", "GAOFEN-3", "high", "civil C-band SAR only"),
+    ("saocom", "prefix", "SAOCOM", "high", ""),
+    ("esa_swarm", "prefix", "SWARM ", "high", "ESA A/B/C; not SPACEBEE"),
+    ("ion_scv", "prefix", "ION SCV", "high", "D-Orbit 60 cm / 64U"),
+    ("ion_scv", "prefix", "ION-SCV", "high", ""),
+    ("ghgsat", "prefix", "GHGSAT", "high", "SFL NEMO 20×30×40 cm"),
+    ("grus", "prefix", "GRUS-", "high", "Axelspace ~0.6×0.6×0.8 m"),
     ("gnss_meo", "prefix", "NAVSTAR", "high", "GPS IIF/III stay on gnss_meo"),
     ("galileo", "contains", "GALILEO", "high", "ESA FOC, distinct from GPS-class"),
     ("gnss_meo", "contains", "GLONASS", "high", ""),
@@ -100,7 +114,20 @@ _NAME_RULES: list[tuple[str, str, str, str, str]] = [
     ("cubesat_3u", "prefix", "FOSSASAT", "high", ""),
     ("cubesat_3u", "prefix", "FOSSASA", "medium", "SATCAT FOSSASA-2E23 typo"),
     ("cubesat_3u", "prefix", "BEESAT", "high", "TU Berlin 1U/3U"),
+    ("cubesat_3u", "prefix", "SNUSAT", "high", "SNU 3U; not Satellogic NUSAT"),
+    ("cubesat_3u", "prefix", "TIGRISAT", "high", ""),
+    ("cubesat_3u", "prefix", "TRISAT", "high", ""),
+    ("cubesat_3u", "prefix", "SAUDICOMSAT", "medium", "12 kg-class"),
+    ("cubesat_3u", "prefix", "SAUDISAT", "medium", ""),
+    ("cubesat_3u", "prefix", "APRIZESAT", "medium", "SpaceQuest ~12 kg"),
     ("cubesat_3u", "contains", "CUBESAT", "high", ""),
+    ("cubesat_6u", "prefix", "TOMORROW-", "high", "Tomorrow.io 6U sounder"),
+    ("cubesat_6u", "prefix", "WILDFIRE", "medium", "OroraTech 6U/8U class"),
+    ("cubesat_6u", "prefix", "FOREST-", "medium", "OroraTech Forest"),
+    ("cubesat_6u", "prefix", "TIANYI", "medium", "Changsha 6U-class"),
+    ("cubesat_6u", "prefix", "CENTAURI", "medium", "Fleet Space 6U/12U"),
+    ("cubesat_16u", "prefix", "IRIDE-MS1-EAGLET", "high",
+     "OHB Eaglet II <30×30×57 cm"),
     ("cubesat_6u", "prefix", "SITRO", "medium", "Sitronics AIS 6U-class"),
     ("cubesat_6u", "prefix", "CONNECTA", "medium", ""),
     ("cubesat_6u", "prefix", "NUSAT-", "medium", "Satellogic NewSat / ÑuSat"),
@@ -180,6 +207,21 @@ def _rocket(name: str) -> MapHit | None:
         return MapHit("pam_d", "high", "rb_pam_d", "")
     if "TRANSTAGE" in u or "TRANSTA" in u:
         return MapHit("titan_transtage", "high", "rb_transtage", "")
+    if "ABLESTAR" in u:
+        return MapHit("thor_ablestar", "high", "rb_ablestar", "")
+    if "BURNER" in u:
+        return MapHit("burner2", "high", "rb_burner2", "")
+    if "THOR DELTA" in u or "THORAD DELTA" in u:
+        return MapHit("delta_upper", "medium", "rb_thor_delta",
+                      "Thor-Delta lingering stage; Delta-class 2.4 m stand-in.")
+    if "ALTAIR" in u:
+        return MapHit("scout", "medium", "rb_altair",
+                      "Altair is Scout stage 4 (0.64 m); family is typical_class.")
+    if u.startswith("TOS") or " TOS" in u:
+        return MapHit("ius", "medium", "rb_tos",
+                      "Transfer Orbit Stage is IUS-class 2.8 m.")
+    if "PAM-S" in u or "PAM S" in u:
+        return MapHit("pam_d", "high", "rb_pam_s", "STAR-48 PAM-S.")
     if u.startswith("FREGAT") or " FREGAT" in u:
         return MapHit("fregat", "high", "rb_fregat", "")
     if u.startswith("BLOCK DM"):
@@ -202,6 +244,20 @@ def _rocket(name: str) -> MapHit | None:
                       "SL-19 is Tsyklon-2; same 2.5 m-class stand-in.")
     if u.startswith("SL-16"):
         return MapHit("zenit2", "high", "rb_sl16", "")
+    if u.startswith("SL-23") or u.startswith("DNEPR") or u.startswith("SS-18"):
+        return MapHit("dnepr", "high", "rb_dnepr", "")
+    if u.startswith("TITAN"):
+        return MapHit("titan_core", "medium", "rb_titan_core",
+                      "3.05 m Titan core; Transtage/Agena already matched.")
+    if u.startswith("ATLAS"):
+        return MapHit("atlas_core", "medium", "rb_atlas_core",
+                      "3.05 m Atlas core; Centaur/Agena/STAR 48 already matched.")
+    if u.startswith("SATURN"):
+        return MapHit("saturn_sivb", "high", "rb_sivb", "")
+    if u.startswith("AVUM"):
+        return MapHit("avum", "high", "rb_avum", "")
+    if "FIREFLY" in u:
+        return MapHit("firefly_alpha", "high", "rb_firefly", "")
     if u.startswith("SL-3") or u.startswith("SL-4") or u.startswith("SL-6"):
         return MapHit("soyuz_block_i", "medium", "rb_r7",
                       "R-7 family lingering stage; 2.66 m Block I stand-in.")
@@ -280,6 +336,14 @@ def resolve(name: str = "", *, cospar: str = "", object_type: str = "PAY",
             return MapHit("geo_bus", "medium", "beidou_geo",
                           "BeiDou / GNSS name in GEO/IGSO period band.")
         return MapHit(family_id, conf, f"{kind}:{pat}", note)
+
+    if u.startswith("YAM-") or u.startswith("YAM "):
+        return MapHit("classified_unpublished", "low", "yam_sda",
+                      "York Space / SDA bus OML is not a public drawing.")
+
+    if u.startswith("BANDWAGON") or u.startswith("ISS OBJECT"):
+        return MapHit("cubesat_3u", "low", "rideshare_object",
+                      "Unnamed rideshare; 3U stand-in, size uncertain.")
 
     if u.startswith("USA ") or u.startswith("IGS "):
         return MapHit("classified_unpublished", "medium",

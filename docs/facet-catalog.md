@@ -61,6 +61,16 @@ Dimension provenance is `public` | `range` | `uncertain` | `typical_class` |
 | `planet_superdove` | 3U Flock | fixed | none public |
 | `planet_skysat` | 60×60×95 cm | 1-axis stand-in | 180 m/s public, vector unknown |
 | `iceye` | bus range + 3.2×0.4 m SAR | 1-axis + fixed SAR | unknown |
+| `terrasat_x` | DLR 5×2.4 m hex + 5×0.8 m SAR (PAZ too) | body-mounted 5.25 m² | chemical, vector unknown |
+| `cosmo_skymed` | first-gen CSK 5.7×1.4 m SAR (not CSG) | 1-axis, 18.3 m² | chemical, vector unknown |
+| `alos2` | JAXA 9.9×16.5×3.7 m, PALSAR-2 2.9×9.9 m | 1-axis | chemical, vector unknown |
+| `radarsat2` | CSA 3.7×1.36 m, 15×1.5 m SAR | 1-axis 3.73×1.8 m | chemical, vector unknown |
+| `gaofen3` | civil C-band 15×1.232 m only | 1-axis stand-in | unknown |
+| `saocom` | INVAP 4.7×1.2 m, 10×3.5 m L-band | 1-axis | chemical, vector unknown |
+| `esa_swarm` | ESA 9.1×1.5×0.85 m + boom | body-mounted | cold-gas, vector unused |
+| `ion_scv` | D-Orbit 60 cm / 64U | n/a | chemical, vector unknown |
+| `ghgsat` | SFL NEMO 20×30×40 cm | fixed | none |
+| `grus` | Axelspace ~0.6×0.6×0.8 m | fixed | unknown |
 | `capella` | FCC 3.5 m mesh SAR | fixed arrays + dish | unknown |
 | `umbra` | 10 m² mesh (eoPortal / patent) | 1-axis stand-in + mesh | unknown |
 | `hawkeye360` | SFL NEMO-15 20×20×44 cm | fixed | unknown |
@@ -89,6 +99,7 @@ Dimension provenance is `public` | `range` | `uncertain` | `typical_class` |
 | `falcon9_s2` / `cz_upper` / `ariane_upper` / `breeze_m` / `electron_kick` | stages | n/a | −z along cylinder |
 | `centaur` / `fregat` / `soyuz_block_i` / `proton_block_d` / `kosmos_3m` / `tsyklon3` / `zenit2` / `pslv_ps4` / `h2_upper` / `block_dm` / `delta_upper` | lingering stages | n/a | −z |
 | `ius` / `agena` / `scout` / `pegasus` / `pam_d` / `titan_transtage` | lingering stages | n/a | −z |
+| `atlas_core` / `titan_core` / `saturn_sivb` / `avum` / `firefly_alpha` / `dnepr` / `thor_ablestar` / `burner2` | lingering stages | n/a | −z |
 | `rocket_body` | generic last-resort stage | n/a | −z |
 | `leo_box_wing` | LEO payload fallback | fixed | unknown |
 | `classified_unpublished` | USA / IGS / unpublished recon | uncertain placeholder | unknown; **not Starshield CAD** |
@@ -97,11 +108,15 @@ Starshield / classified USA objects map to `classified_unpublished` with
 every dimension tagged uncertain. SpaceX internals beyond the public FCC
 table are not invented.
 
-Not added (no public OML, or not in this SATCAT extract): Swarm Technologies
-SPACEBEE (absent from the 2026-08-21 extract; ESA SWARM A/B/C are a different
-vehicle and stay `leo_box_wing`), Pelican, JILIN / GAOFEN / GEESAT / CENTISPACE,
-TERRASAR-X (1 object; `TERRA` is an exact-name map so a `TERRA` prefix is
-unsafe), Agena-era Titan/Thor cores that are not Transtage/Agena/IUS.
+Not added (no primary public OML — left in `leo_box_wing` on purpose):
+Jilin-1 (mixed 40–420 kg buses; eoPortal has mass, not one OML),
+optical Gaofen-1/2/5/6/7/9/11/12 (only GF-3 SAR is cited), SuperView Neo
+(mass only), GEESat / CentiSpace / Yunhai / Haiyang / Tianhui / Tianmu
+(KeepTrack-only or unpublished), COSMO-SkyMed second gen (`CSG-*`),
+Pelican, Rassvet, Gonets-M, IRIDE HEO/FM (not Eaglet II). Yaogan stays
+`classified_unpublished`. Swarm Technologies SPACEBEE is absent from this
+extract; ESA `SWARM A/B/C` is the `esa_swarm` family. `TERRA` remains an
+exact-name EOS map so TerraSAR-X is matched on `TERRASAR`, not `TERRA`.
 
 ## Mapping (name / COSPAR → family)
 
@@ -130,8 +145,9 @@ Inmarsat stays on `geo_bus` (generic 3-axis GEO). GOES 16–19 are `goes_r`;
 older GOES / EWS-G stay `geo_bus`.
 
 `GLOBAL-n` is BlackSky; `GLOBALSTAR` is Globalstar (order matters).
-`NUSAT-` is Satellogic; `SNUSAT` is not. `DRAGON` visiting-vehicle prefixes
-only — `DRAGONFLY` is not Cargo Dragon.
+`NUSAT-` is Satellogic; `SNUSAT` is the SNU 3U (`cubesat_3u`). `DRAGON`
+visiting-vehicle prefixes only — `DRAGONFLY` is not Cargo Dragon.
+`FLOCK` is still SuperDove. `YAM-*` is York/SDA unpublished.
 
 ## Coverage snapshot
 
@@ -156,21 +172,23 @@ python scripts/refresh_satcat_snapshot.py
 
 | | n | mapped | named | named % | leftover fallback |
 |---|---:|---:|---:|---:|---|
-| active payloads | 16,870 | 16,870 | 14,170 | **84.0%** | `leo_box_wing` 2,024 |
-| rocket bodies | 2,422 | 2,422 | 2,181 | **90.0%** | `rocket_body` 241 |
+| active payloads | 16,870 | 16,870 | 14,323 | **84.9%** | `leo_box_wing` 1,857 |
+| rocket bodies | 2,422 | 2,422 | 2,278 | **94.1%** | `rocket_body` 144 |
 
-First-pass PR #6 (same snapshot) was 82.3% named payloads / 25.5% named
-rocket bodies (`leo_box_wing` 2,393, generic `rocket_body` 1,804).
+Earlier cuts on the same snapshot: first-pass 82.3% / 25.5%; previous hone
+84.0% / 90.0% (`leo_box_wing` 2,024, generic `rocket_body` 241).
 
-Payload confidence this pass: low 2,626 / medium 8,918 / high 5,326.
+Payload confidence this pass: low 2,493 / medium 8,967 / high 5,410.
 
 Largest leftover payload piles (no public OML, left as `leo_box_wing`):
-COSMOS, JILIN, RASSVET, GONETS-M, CENTISPACE, IRIDE, TIANMU, ION SCV,
-Chinese optical/weather stacks, ESA SWARM A/B/C (not Swarm SPACEBEE).
+COSMOS (111), Jilin-1 (33+), Rassvet-3 (31), Gonets-M (23), CentiSpace (33),
+IRIDE HEO/FM (23), Tianmu-1 (20), SuperView (12), GEESat (~63), Yunhai,
+optical Gaofen, Haiyang, Tianhui, Aether, HJS, SCS-01.
 
-Largest leftover rocket-body piles (no named stage family): Titan/Thor/Atlas
-cores that are not Transtage/Agena/IUS/Centaur, plus AKM / IABS / Saturn /
-Diamant / Minotaur.
+Largest leftover rocket-body piles (still generic): mixed AKM/PKM (~40,
+sizes differ — not lumped), IABS (9), Minotaur (8), Diamant (5), Japanese
+N/M-V (handful), Taurus, KSLV-II, Lijian-1, H-1/H-3, Epsilon, Volga,
+Falcon 1, New Glenn, SLS, Vanguard.
 
 ## What is unknown (on purpose)
 

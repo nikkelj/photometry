@@ -7,6 +7,7 @@ from collections.abc import Callable
 from ..shapes import LIBRARY, FacetModel
 from . import families as _fam
 from . import families_more as _more
+from . import families_pass3 as _p3
 
 FAMILIES: dict[str, Callable[[], FacetModel]] = {
     **LIBRARY,
@@ -72,6 +73,24 @@ FAMILIES: dict[str, Callable[[], FacetModel]] = {
     "pegasus": _more.pegasus,
     "pam_d": _more.pam_d,
     "titan_transtage": _more.titan_transtage,
+    "terrasat_x": _p3.terrasat_x,
+    "cosmo_skymed": _p3.cosmo_skymed,
+    "alos2": _p3.alos2,
+    "radarsat2": _p3.radarsat2,
+    "gaofen3": _p3.gaofen3,
+    "saocom": _p3.saocom,
+    "esa_swarm": _p3.esa_swarm,
+    "ion_scv": _p3.ion_scv,
+    "ghgsat": _p3.ghgsat,
+    "grus": _p3.grus,
+    "atlas_core": _p3.atlas_core,
+    "titan_core": _p3.titan_core,
+    "saturn_sivb": _p3.saturn_sivb,
+    "avum": _p3.avum,
+    "firefly_alpha": _p3.firefly_alpha,
+    "dnepr": _p3.dnepr,
+    "thor_ablestar": _p3.thor_ablestar,
+    "burner2": _p3.burner2,
 }
 
 

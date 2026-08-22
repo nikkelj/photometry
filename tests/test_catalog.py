@@ -154,13 +154,32 @@ def test_mapping_examples():
         "METOP-B": "metop",
         "ASTROCAST-0401": "cubesat_3u",
         "NUSAT-1": "cubesat_6u",
+        "TERRASAR-X": "terrasat_x",
+        "PAZ": "terrasat_x",
+        "COSMO-SKYMED 1": "cosmo_skymed",
+        "ALOS-2": "alos2",
+        "RADARSAT-2": "radarsat2",
+        "GAOFEN-3": "gaofen3",
+        "SAOCOM 1A": "saocom",
+        "SWARM A": "esa_swarm",
+        "ION SCV-011": "ion_scv",
+        "GHGSAT-C1": "ghgsat",
+        "GRUS-1A": "grus",
+        "TOMORROW-S1": "cubesat_6u",
+        "FLOCK 4Q-16": "planet_superdove",
+        "SNUSAT-2": "cubesat_3u",
     }
     for name, fam in named.items():
         hit = resolve(name)
         assert hit.family_id == fam, (name, hit)
         assert hit.family_id != "leo_box_wing"
     assert resolve("SNUSAT-1").family_id != "cubesat_6u"
+    assert resolve("SNUSAT-1").family_id == "cubesat_3u"
     assert resolve("DRAGONFLY").family_id != "cargo_dragon"
+    assert resolve("GAOFEN-1").family_id == "leo_box_wing"
+    assert resolve("JILIN-1").family_id == "leo_box_wing"
+    assert resolve("CSG-1").family_id == "leo_box_wing"
+    assert resolve("YAOGAN 1").family_id == "classified_unpublished"
     assert resolve("YZ-1 R/B", object_type="R/B").family_id == "cz_upper"
     assert resolve("ATLAS 5 CENTAUR R/B", object_type="R/B").family_id == "centaur"
     assert resolve("ATLAS AGENA D R/B", object_type="R/B").family_id == "agena"
@@ -173,6 +192,14 @@ def test_mapping_examples():
     assert resolve("PEGASUS R/B", object_type="R/B").family_id == "pegasus"
     assert resolve("ANIK C1 R/B [PAM-D]", object_type="R/B").family_id == "pam_d"
     assert resolve("TITAN 3C TRANSTAGE R/B", object_type="R/B").family_id == "titan_transtage"
+    assert resolve("TITAN 4 R/B", object_type="R/B").family_id == "titan_core"
+    assert resolve("ATLAS 2A R/B", object_type="R/B").family_id == "atlas_core"
+    assert resolve("SATURN 5 R/B", object_type="R/B").family_id == "saturn_sivb"
+    assert resolve("AVUM R/B", object_type="R/B").family_id == "avum"
+    assert resolve("FIREFLY ALPHA R/B", object_type="R/B").family_id == "firefly_alpha"
+    assert resolve("SL-23 R/B", object_type="R/B").family_id == "dnepr"
+    assert resolve("THOR ABLESTAR R/B", object_type="R/B").family_id == "thor_ablestar"
+    assert resolve("THOR BURNER 2 R/B", object_type="R/B").family_id == "burner2"
     assert resolve("STARLINK-1008", launch_date="2019-11-11").confidence == "high"
 
 
@@ -196,6 +223,8 @@ def test_coverage_against_vendored_snapshot():
     assert "capella" in pay["by_family"]
     assert "sentinel1" in pay["by_family"]
     assert "goes_r" in pay["by_family"]
+    assert "terrasat_x" in pay["by_family"]
+    assert "gaofen3" in pay["by_family"]
 
 
 def test_surfaces_split_on_new_families():
