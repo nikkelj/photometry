@@ -1,0 +1,11 @@
+starlink_v15__yaw90          rows=  3122 z_max=454.7 events=1 fit_err_t0=94.29068958767766
+starlink_v15__yaw180         rows=  3117 z_max=1204.0 events=1 fit_err_t0=121.8513908269706
+starlink_v2mini__yaw90       rows=  3280 z_max=281.2 events=1 fit_err_t0=39.9509263578384
+starlink_v2mini__yaw180      rows=  3296 z_max=773.8 events=1 fit_err_t0=1091.0097019438144
+ru_persona__yaw90            rows=  3535 z_max=478.0 events=1 fit_err_t0=43.78626045683359
+ru_persona__yaw180           rows=  3538 z_max=533.6 events=1 fit_err_t0=-7.000992571367533
+cn_yaogan_sar__yaw90         rows=  3397 z_max=643.8 events=1 fit_err_t0=-34.91869951179797
+cn_yaogan_sar__yaw180        rows=  3391 z_max=1193.6 events=2 fit_err_t0=-3.861769257520791
+starlink_v15__control        rows=  3132 z_max=4.1 events=0 fit_err_t0=None
+starlink_v2mini__control     rows=  3292 z_max=3.8 events=0 fit_err_t0=None
+wrote results/slew/summary.json

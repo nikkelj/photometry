@@ -277,12 +277,20 @@ class FacetModel:
         return th, ph
 
     def body_normals(self, u_sun_body: np.ndarray,
-                     articulate: bool = True) -> np.ndarray:
+                     articulate: bool = True,
+                     offset_deg: float = 0.0) -> np.ndarray:
         """Facet normals (F,K,3) for K sun directions in the body frame.
 
         1-axis rotates the rest normal about `gimbal_axis` (out-of-plane
         cosine loss remains). 2-axis is shoulder then wrist. Fixed stays
         at rest. Mirror facets follow the partner.
+
+        `offset_deg` models off-pointed array control (power throttling /
+        thermal management) as a hinge-frame bias on top of the tracked
+        solution: 1-axis facets rotate the achieved normal further about
+        the shoulder axis, 2-axis facets about the carried wrist axis —
+        both stay physically realizable hinge states. Zero is exact
+        tracking; the parameter only applies when articulating.
         """
         sun = np.asarray(u_sun_body, dtype=float)
         k = len(sun)
@@ -290,6 +298,7 @@ class FacetModel:
         if not (articulate and self.articulated):
             return n
         th, ph = self.gimbal_angles(sun)
+        off = np.radians(offset_deg)
         for i in range(self.n_facets):
             if self.mirror_of[i] >= 0 or self.gimbal_mode[i] == GIMBAL_FIXED:
                 continue
@@ -297,12 +306,14 @@ class FacetModel:
             g = self.gimbal_axis[i]
             n1 = _rotate_about(n0, g, th[i])
             if self.gimbal_mode[i] == GIMBAL_1AXIS:
-                n[i] = n1
+                n[i] = n1 if off == 0.0 else _rotate_about(
+                    n1, g, np.full(k, off))
                 continue
             w1 = _rotate_about(self.wrist_axis[i], g, th[i])
             n2 = np.empty_like(n1)
             for j in range(k):
-                n2[j] = _rotate_about(n1[j], w1[j], np.array([ph[i, j]]))[0]
+                n2[j] = _rotate_about(n1[j], w1[j],
+                                      np.array([ph[i, j] + off]))[0]
             n[i] = n2
         for i in range(self.n_facets):
             if self.mirror_of[i] >= 0:

@@ -1,0 +1,28 @@
+24 targets
+us_comm03            ops        arr=frozen short=Y rank=1 top1=us_comm03 (177s)
+au_cube01            ops        arr=n/a    short=Y rank=3 top1=nl_cube01 (108s)
+fr_eo02              ops        arr=frozen short=N rank=None top1=in_eo03 (186s)
+cn_flat01            ops        arr=offset short=Y rank=2 top1=eu_sci01 (170s)
+us_rb01              tumble     arr=n/a    short=Y rank=4 top1=ru_rb04 (211s)
+de_sar01             ops        arr=track  short=Y rank=1 top1=de_sar01 (166s)
+eu_sci01             safe_sun   arr=frozen short=N rank=None top1=us_sci03 (187s)
+ir_small02           ops        arr=track  short=Y rank=1 top1=ir_small02 (141s)
+us_stn01             tumble     arr=frozen short=Y rank=7 top1=eu_rb01 (175s)
+jp_tug01             sun_point  arr=frozen short=Y rank=1 top1=jp_tug01 (202s)
+cn_wx02              safe_sun   arr=frozen short=Y rank=6 top1=eu_flat02 (181s)
+us_comm04            sun_point  arr=offset short=N rank=None top1=cn_flat01 (184s)
+sg_cube01            ops        arr=n/a    short=Y rank=4 top1=in_cube01 (158s)
+cn_eo01              ops        arr=frozen short=N rank=None top1=in_eo03 (172s)
+cn_flat06            low_drag   arr=frozen short=Y rank=1 top1=cn_flat06 (181s)
+ru_rb04              tumble     arr=n/a    short=Y rank=4 top1=eu_rb01 (202s)
+us_sar01             sun_point  arr=frozen short=Y rank=5 top1=jp_sar01 (211s)
+us_sci02             science    arr=track  short=N rank=None top1=in_sci01 (210s)
+ir_small01           ops        arr=track  short=Y rank=1 top1=ir_small01 (146s)
+us_stn02             tumble     arr=track  short=Y rank=10 top1=cn_stn02 (184s)
+starlink_v2mini      ops        arr=track  short=Y rank=1 top1=starlink_v2mini (165s)
+katalyst_link        tumble     arr=track  short=N rank=None top1=in_eo01 (170s)
+hubble               science    arr=track  short=Y rank=10 top1=cn_rb05 (178s)
+bluewalker3          tumble     arr=track  short=N rank=None top1=eu_flat02 (177s)
+
+shortlist recall 0.71  top-1 0.29  family 0.71
+wrote results/library_scale/summary.json

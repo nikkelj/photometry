@@ -1,0 +1,172 @@
+[
+  {
+    "scenario": "katalyst_link__tumble",
+    "n_rows": 26857,
+    "n_censored": 0,
+    "n_truth_glints_cal": 77,
+    "detector_raw": {
+      "n": 124,
+      "precision": 0.3709677419354839,
+      "recall": 0.5974025974025974
+    },
+    "fold_filter_applied": false,
+    "detector_folded": {
+      "n": 124,
+      "precision": 0.3709677419354839,
+      "recall": 0.5974025974025974
+    },
+    "n_pairs": 35,
+    "n_waypoints": 2,
+    "pair_gate_cone_deg": 4.0,
+    "waypoint_window_s": 900.0,
+    "waypoint_err_deg": [
+      2.32066303578272,
+      3.489717555722319
+    ],
+    "hypothesis_err_deg": [
+      0.06142211659320334,
+      0.06005787524951973
+    ],
+    "waypoint_t_s": [
+      2682.0,
+      49240.5
+    ],
+    "waypoint_condition": [
+      0.02401955171246088,
+      0.029433530622515674
+    ],
+    "waypoint_err_median": 2.9051902957525195,
+    "hypothesis_err_median": 0.060739995921361534,
+    "oracle": {
+      "n_pairs": 35,
+      "n_waypoints": 2,
+      "err_deg": [
+        2.3206630400934047,
+        3.4896819297530017
+      ],
+      "err_median": 2.9051724849232032
+    }
+  },
+  {
+    "scenario": "starlink_v15__tumble",
+    "n_rows": 24499,
+    "n_censored": 0,
+    "n_truth_glints_cal": 147,
+    "detector_raw": {
+      "n": 78,
+      "precision": 0.5897435897435898,
+      "recall": 0.3129251700680272
+    },
+    "fold_filter_applied": false,
+    "detector_folded": {
+      "n": 78,
+      "precision": 0.5897435897435898,
+      "recall": 0.3129251700680272
+    },
+    "n_pairs": 40,
+    "n_waypoints": 5,
+    "pair_gate_cone_deg": 4.0,
+    "waypoint_window_s": 3600.0,
+    "waypoint_err_deg": [
+      82.83343602193024,
+      95.47028493099228,
+      85.68207427519869,
+      87.13516473291317,
+      86.0901968646891
+    ],
+    "hypothesis_err_deg": [
+      90.07115878039468,
+      90.10294913839179,
+      90.10632887287848,
+      90.09891781066098,
+      90.10495885361715
+    ],
+    "waypoint_t_s": [
+      2465.25,
+      13826.0,
+      20064.0,
+      24897.0,
+      66440.4
+    ],
+    "waypoint_condition": [
+      0.028915318302900984,
+      0.0006369776430116635,
+      0.018840927887887347,
+      0.00151484248042633,
+      0.015112835254442653
+    ],
+    "waypoint_err_median": 86.0901968646891,
+    "hypothesis_err_median": 90.10294913839179,
+    "oracle": {
+      "n_pairs": 40,
+      "n_waypoints": 5,
+      "err_deg": [
+        7.210527353876348,
+        5.775728142983616,
+        4.936004255749414,
+        3.697106586221194,
+        5.4792667461351625
+      ],
+      "err_median": 5.4792667461351625
+    }
+  },
+  {
+    "scenario": "katalyst_link__multiaxis_tumble",
+    "n_rows": 26553,
+    "n_censored": 28,
+    "n_truth_glints_cal": 322,
+    "detector_raw": {
+      "n": 200,
+      "precision": 0.6569767441860465,
+      "recall": 0.35093167701863354
+    },
+    "fold_filter_applied": false,
+    "detector_folded": {
+      "n": 200,
+      "precision": 0.6569767441860465,
+      "recall": 0.35093167701863354
+    },
+    "n_pairs": 7,
+    "n_waypoints": 0,
+    "pair_gate_cone_deg": 10.0,
+    "waypoint_window_s": 1200.0,
+    "waypoint_err_deg": [],
+    "hypothesis_err_deg": [],
+    "waypoint_t_s": [],
+    "waypoint_condition": [],
+    "waypoint_err_median": null,
+    "hypothesis_err_median": null,
+    "oracle": {
+      "n_pairs": 134,
+      "n_waypoints": 25,
+      "err_deg": [
+        5.353183386146967,
+        0.9857798053002101,
+        12.390283629730549,
+        2.4735872387923705,
+        12.621418881782585,
+        2.387234244630261,
+        8.556960218990312,
+        2.708644232064677,
+        6.660153042901312,
+        8.333605907378692,
+        1.0394383137480967,
+        1.7146400510610056,
+        6.743842010739318,
+        2.882447275164863,
+        22.248121379008754,
+        2.8883160333341977,
+        8.765410007818556,
+        0.971387195832474,
+        3.0356591256431593,
+        4.614393728041586,
+        3.127854952824726,
+        70.4088639849031,
+        2.9994252619583994,
+        55.511296916050206,
+        3.36702267671641
+      ],
+      "err_median": 3.36702267671641
+    }
+  }
+]

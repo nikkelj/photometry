@@ -99,6 +99,51 @@ class LvlhHold:
 
 
 @dataclass
+class LvlhYawSlew:
+    """LVLH-locked attitude executing an orbit-adjust yaw slew.
+
+    Yaw about the body/LVLH z (zenith) axis follows a smoothstep ramp
+    from `yaw0_deg` to `yaw0_deg + yaw_hold_deg` over `slew_s` seconds
+    starting at `t_start_s`, holds through the burn for `hold_s`, then
+    ramps back over `slew_s`. This is the classic pre-burn 90/180 deg
+    yaw-around: many minutes out, many minutes holding, many minutes
+    back. Doubles as truth model and fit hypothesis.
+    """
+
+    orbit: object
+    yaw_hold_deg: float
+    t_start_s: float
+    slew_s: float
+    hold_s: float
+    yaw0_deg: float = 0.0
+
+    def yaw_profile_deg(self, t: np.ndarray) -> np.ndarray:
+        t = np.asarray(t, dtype=float)
+        t0, s, h = self.t_start_s, self.slew_s, self.hold_s
+        up = np.clip((t - t0) / max(s, 1e-9), 0.0, 1.0)
+        down = np.clip((t - t0 - s - h) / max(s, 1e-9), 0.0, 1.0)
+        smooth = lambda x: x * x * (3 - 2 * x)  # noqa: E731
+        return self.yaw0_deg + self.yaw_hold_deg * (smooth(up) - smooth(down))
+
+    def eci_to_body(self, t: np.ndarray, v_eci: np.ndarray) -> np.ndarray:
+        r, v = self.orbit.single_states(np.asarray(t, dtype=float))
+        along, cross, up = lvlh_basis(r, v)
+        v_lvlh = np.stack(
+            [np.sum(v_eci * along, axis=-1), np.sum(v_eci * cross, axis=-1),
+             np.sum(v_eci * up, axis=-1)], axis=-1)
+        # v @ Rz(yaw) per row == rotate by -yaw about z (LvlhHold convention)
+        yaw = np.radians(self.yaw_profile_deg(t))
+        return rotate_about_axis(v_lvlh, np.array([0.0, 0.0, 1.0]), -yaw)
+
+    def body_to_eci_matrix(self, t: float) -> np.ndarray:
+        r, v = self.orbit.single_states(np.atleast_1d(float(t)))
+        along, cross, up = lvlh_basis(r, v)
+        m = np.stack([along[0], cross[0], up[0]], axis=-1)
+        yaw = float(np.radians(self.yaw_profile_deg(np.asarray(t))))
+        return m @ rodrigues(np.array([0.0, 0.0, 1.0]), yaw)
+
+
+@dataclass
 class FixedInertial:
     """Inertially fixed attitude given by a body-to-ECI rotation matrix."""
 
