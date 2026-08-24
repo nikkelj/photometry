@@ -46,7 +46,12 @@ DT_S = 6.0
 
 CASES = [
     dict(truth="iceye", mode="tumble", identity="ICEYE-X44"),
-    dict(truth="cubesat_3u", mode="ops", identity="LEMUR-2 KAREN-B"),
+    # NOTE: the honest-scale cubesat_3u template was tried here and is
+    # invisible to the fleet (zero detections in 3 h — a real 3U at these
+    # ranges sits below the limiting magnitude; the generated-library
+    # cubesats that caused twin confusion carry oversized deployables).
+    # OneWeb vs the generated box-wing comms is the bright twin case.
+    dict(truth="oneweb", mode="ops", identity="ONEWEB-0611"),
     dict(truth="cn_yaogan_sar", mode="ops", identity="YAOGAN-33"),
 ]
 
@@ -78,9 +83,15 @@ def main() -> None:
         att = make_attitude(case["mode"], orbit, rng)
         constellation = WalkerConstellation(100, 100, 550.0, 53.0)
         t_grid = np.arange(0.0, DURATION_S, DT_S)
-        obs = simulate_detections(constellation, orbit, shape, att, sun,
-                                  t_grid, SensorConfig(), rng,
-                                  articulate=shape.articulated)
+        try:
+            obs = simulate_detections(constellation, orbit, shape, att, sun,
+                                      t_grid, SensorConfig(), rng,
+                                      articulate=shape.articulated)
+        except RuntimeError:
+            rows.append(dict(case=case, status="undetectable", n_rows=0))
+            print(f"{case['truth']:16s} {case['mode']:6s} UNDETECTABLE "
+                  "(below limiting magnitude)", flush=True)
+            continue
 
         prior = satcat_prior([case["identity"]])
         t0 = time.time()
