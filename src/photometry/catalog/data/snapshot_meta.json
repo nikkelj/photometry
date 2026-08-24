@@ -1,0 +1,10 @@
+{
+  "source": "https://celestrak.org/pub/satcat.csv",
+  "source_last_modified_utc": "2026-08-21T18:39:02Z",
+  "snapshot_utc": "2026-08-21",
+  "selection": "Earth-orbit PAY with OPS_STATUS_CODE in +PBSX (Celestrak active payloads) plus on-orbit R/B",
+  "n_rows": 19292,
+  "n_active_payloads": 16870,
+  "n_rocket_bodies": 2422,
+  "filename": "satcat_active_2026-08-21.csv.gz"
+}
