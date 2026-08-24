@@ -251,3 +251,41 @@ def test_array_offset_moves_tracked_normals():
     assert np.all(ang > 20.0)          # tracked facets moved ~offset
     fixed = ~gim
     assert np.allclose(n0[fixed], n1[fixed])  # fixed facets untouched
+
+
+def test_unified_registry_and_satcat_prior():
+    from photometry.registry import (rerank_with_prior, satcat_prior,
+                                     seed_shortlist, unified_library)
+
+    lib, meta = unified_library()
+    assert len(lib) >= 290
+    names = [m["name"] for m in meta]
+    assert len(names) == len(set(names)) == len(lib)
+    sources = {m["source"] for m in meta}
+    assert sources == {"catalog", "generated", "intel_annex"}
+    # catalog family ids are directly addressable registry entries
+    for fid in ["iceye", "oneweb", "cubesat_3u", "falcon9_s2", "iss"]:
+        assert fid in lib and lib[fid]().n_facets > 0
+    # rocket stages carry tumble-only truth modes
+    stage = next(m for m in meta if m["name"] == "centaur")
+    assert stage["attitude_modes"] == ["tumble"]
+
+    prior = satcat_prior(["ICEYE-X44", "LEMUR-2 KAREN-B", "NOT-A-SAT-XYZ"])
+    assert prior.get("iceye") == 1.0 and prior.get("cubesat_3u") == 1.0
+    # an unrecognized payload name falls back to the class placeholder at
+    # low confidence — present, but too weak to matter outside a dead tie
+    assert prior.get("leo_box_wing", 0.0) <= 0.3
+    # a truly type-less identity contributes nothing
+    assert satcat_prior([dict(OBJECT_NAME="NOT-A-SAT", OBJECT_TYPE="DEB")]) == {}
+
+    # seeding guarantees mapped families survive the funnel
+    seeded = seed_shortlist(["a", "b"], prior, lib)
+    assert "iceye" in seeded and "cubesat_3u" in seeded
+
+    # prior settles ties inside the twin margin only
+    ranked = [("twin_a", 1.0), ("iceye", 1.1), ("far", 3.0)]
+    rr, info = rerank_with_prior(ranked, prior)
+    assert rr[0][0] == "iceye" and info["changed_top1"]
+    # a decisive photometric win is never overridden
+    rr2, _ = rerank_with_prior([("clear", 1.0), ("iceye", 2.0)], prior)
+    assert rr2[0][0] == "clear"
