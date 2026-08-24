@@ -37,6 +37,7 @@ python scripts/run_glints.py                    # glint detector + Wahba waypoin
 python scripts/run_library_scale.py             # 217-model catalog-scale ID test
 python scripts/run_observability_trade.py       # constellation-size knee
 python scripts/run_slew_study.py                # pre-burn yaw-around study
+python scripts/run_unified_id.py                # 300-model registry + SATCAT priors
 python scripts/make_charts.py; python scripts/make_fleet_charts.py
 python scripts/make_glint_chart.py; python scripts/make_scale_charts.py
 python scripts/make_movies.py                   # all validation movies
@@ -47,9 +48,11 @@ python -m pytest tests/
 The spacecraft **facet catalog** (family templates for the active public
 catalog, SATCAT name/COSPAR mapping, thrust vs LVLH, per-facet materials)
 is documented in
-[docs/facet-catalog.md](docs/facet-catalog.md). Study-orbit identification
-still uses the original `shapes.LIBRARY`; new families live in
-`photometry.catalog`.
+[docs/facet-catalog.md](docs/facet-catalog.md). Catalog families, the
+generated stress library, and the intel annex are unified into one
+300-model registry (`photometry.registry.unified_library()`), with the
+SATCAT mapping feeding identification as a prior — see the unified
+registry section below.
 
 ---
 
@@ -368,6 +371,48 @@ harvest the transients with the glint/Wahba tier (a slewing body sweeps
 its specular normals across the fleet's bisectors — transients should
 be glint-burst-rich); and fold detections into the stored
 change-point/maneuver-window scanning design.
+
+---
+
+## Unified registry + SATCAT identification priors
+
+The repo's two model sources are now one namespace
+(`photometry.registry.unified_library()`, **300 models**): the
+SATCAT-mapped catalog family templates, the 200 generated hypotheticals,
+and the intelligence annex. The operational payoff is that the catalog
+mapping becomes an *identification prior*: association hands the funnel
+a candidate identity, `catalog.resolve` names the family template it
+should be, `seed_shortlist` guarantees that template survives the
+funnel, and `rerank_with_prior` lets the prior order the ranking —
+**only inside the photometric-twin equivalence class** (cost ≤ 1.25× of
+best, the band the catalog-scale study measured as undecidable). A
+decisive photometric fit is never overridden: a stale or spoofed
+association can settle draws, not force misidentifications.
+
+Three end-to-end cases against all 300 models
+(`results/unified_id/summary.json`), each exercising a different branch:
+
+- **ICEYE, tumbling, identity "ICEYE-X44"** → rank 1, twin class of
+  one (cost 5.5 vs 9.7 runner-up). Photometry decisive; prior unneeded.
+- **OneWeb, ops, "ONEWEB-0611"** → rank 1 at cost 1.03 with a generated
+  box-wing comm (`ru_comm02`, 1.21) inside the twin band — the designed
+  tie-breaking case: the prior confirms the winner, and would settle the
+  draw the other way had photometry waffled.
+- **Yaogan-SAR (annex), ops, "YAOGAN-33"** → maps only to the
+  low-confidence `classified_unpublished` placeholder (weight 0.3),
+  which was seeded into the shortlist but sits *outside* the twin class
+  — so it correctly did nothing, and photometry picked the annex model
+  (0.97) over its genuine near-twin `jp_igs_radar` (1.19). The
+  wrong-hint safety property, demonstrated rather than asserted.
+
+Two honest footnotes. The true-scale `cubesat_3u` template is
+**invisible to the fleet** (zero detections in 3 h — a real 3U sits
+below the limiting magnitude at these ranges; the generated cubesats
+that caused twin confusion in the scale study carry oversized
+deployables), so the cubesat twin-breaking case cannot be run at
+honest scale. And the yaogan/IGS twin pair shows the intel annex now
+confuses *itself* photometrically — precisely the regime where an
+association prior is the only tie-breaker on offer.
 
 ---
 

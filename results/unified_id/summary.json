@@ -1,0 +1,339 @@
+{
+ "n_models": 300,
+ "rows": [
+  {
+   "case": {
+    "truth": "iceye",
+    "mode": "tumble",
+    "identity": "ICEYE-X44"
+   },
+   "n_rows": 3127,
+   "prior": {
+    "iceye": 1.0
+   },
+   "shortlist": [
+    "electron_kick",
+    "orbcomm_og2",
+    "us_rb03",
+    "ng_small01",
+    "iabs",
+    "us_small03",
+    "avum",
+    "ru_small02",
+    "burner2",
+    "planet_skysat",
+    "pam_d",
+    "in_eo02",
+    "pegasus",
+    "us_small04",
+    "scout",
+    "uk_comm03",
+    "iceye"
+   ],
+   "prior_seeded": [
+    "iceye"
+   ],
+   "photometric": [
+    [
+     "iceye",
+     5.496285819990659
+    ],
+    [
+     "uk_comm03",
+     9.723439655253573
+    ],
+    [
+     "orbcomm_og2",
+     11.856805398280926
+    ],
+    [
+     "planet_skysat",
+     12.531398210380557
+    ],
+    [
+     "iabs",
+     25.63057651100728
+    ],
+    [
+     "us_rb03",
+     27.526987892483035
+    ],
+    [
+     "electron_kick",
+     28.166762656029857
+    ],
+    [
+     "burner2",
+     28.90891554859372
+    ]
+   ],
+   "reranked": [
+    [
+     "iceye",
+     5.496285819990659
+    ],
+    [
+     "uk_comm03",
+     9.723439655253573
+    ],
+    [
+     "orbcomm_og2",
+     11.856805398280926
+    ],
+    [
+     "planet_skysat",
+     12.531398210380557
+    ],
+    [
+     "iabs",
+     25.63057651100728
+    ],
+    [
+     "us_rb03",
+     27.526987892483035
+    ],
+    [
+     "electron_kick",
+     28.166762656029857
+    ],
+    [
+     "burner2",
+     28.90891554859372
+    ]
+   ],
+   "rank_before": 1,
+   "rank_after": 1,
+   "twin_class": 1,
+   "twin_names": [
+    "iceye"
+   ],
+   "prior_applied": true,
+   "changed_top1": false,
+   "t_shortlist": 5.430148601531982,
+   "t_match": 185.53645205497742
+  },
+  {
+   "case": {
+    "truth": "oneweb",
+    "mode": "ops",
+    "identity": "ONEWEB-0611"
+   },
+   "n_rows": 3247,
+   "prior": {
+    "oneweb": 1.0
+   },
+   "shortlist": [
+    "oneweb",
+    "us_small01",
+    "us_comm02",
+    "de_tug01",
+    "classified_unpublished",
+    "mx_small01",
+    "ru_comm02",
+    "ua_small01",
+    "fi_sar03",
+    "pk_small01",
+    "orbcomm_og2",
+    "us_small02",
+    "iceye",
+    "cn_eo04",
+    "cn_sar03",
+    "de_tug02"
+   ],
+   "prior_seeded": [
+    "oneweb"
+   ],
+   "photometric": [
+    [
+     "oneweb",
+     1.0279497781707032
+    ],
+    [
+     "ru_comm02",
+     1.2138369344260436
+    ],
+    [
+     "us_comm02",
+     1.31218189948161
+    ],
+    [
+     "classified_unpublished",
+     1.3620377502970202
+    ],
+    [
+     "fi_sar03",
+     2.3578132577524697
+    ],
+    [
+     "orbcomm_og2",
+     2.5134038950628343
+    ],
+    [
+     "iceye",
+     2.8094755447568684
+    ],
+    [
+     "cn_sar03",
+     3.907300393918884
+    ]
+   ],
+   "reranked": [
+    [
+     "oneweb",
+     1.0279497781707032
+    ],
+    [
+     "ru_comm02",
+     1.2138369344260436
+    ],
+    [
+     "us_comm02",
+     1.31218189948161
+    ],
+    [
+     "classified_unpublished",
+     1.3620377502970202
+    ],
+    [
+     "fi_sar03",
+     2.3578132577524697
+    ],
+    [
+     "orbcomm_og2",
+     2.5134038950628343
+    ],
+    [
+     "iceye",
+     2.8094755447568684
+    ],
+    [
+     "cn_sar03",
+     3.907300393918884
+    ]
+   ],
+   "rank_before": 1,
+   "rank_after": 1,
+   "twin_class": 2,
+   "twin_names": [
+    "oneweb",
+    "ru_comm02"
+   ],
+   "prior_applied": true,
+   "changed_top1": false,
+   "t_shortlist": 2.9421918392181396,
+   "t_match": 149.3262906074524
+  },
+  {
+   "case": {
+    "truth": "cn_yaogan_sar",
+    "mode": "ops",
+    "identity": "YAOGAN-33"
+   },
+   "n_rows": 3390,
+   "prior": {
+    "classified_unpublished": 0.3
+   },
+   "shortlist": [
+    "cn_yaogan_sar",
+    "us_sci03",
+    "cosmo_skymed",
+    "us_eo02",
+    "kr_sar01",
+    "us_comm07",
+    "jp_igs_radar",
+    "in_sci01",
+    "us_sar01",
+    "us_sci02",
+    "radarsat2",
+    "eu_comm04",
+    "us_sar03",
+    "in_comm01",
+    "fi_sar02",
+    "us_comm03",
+    "classified_unpublished"
+   ],
+   "prior_seeded": [
+    "classified_unpublished"
+   ],
+   "photometric": [
+    [
+     "cn_yaogan_sar",
+     0.9721851965946605
+    ],
+    [
+     "jp_igs_radar",
+     1.1921111432568594
+    ],
+    [
+     "cosmo_skymed",
+     1.3165667322863994
+    ],
+    [
+     "kr_sar01",
+     1.3197917453496513
+    ],
+    [
+     "radarsat2",
+     1.6132117614176948
+    ],
+    [
+     "us_sar01",
+     1.7129011221253856
+    ],
+    [
+     "us_sar03",
+     1.8084567902147806
+    ],
+    [
+     "fi_sar02",
+     2.181547652762633
+    ]
+   ],
+   "reranked": [
+    [
+     "cn_yaogan_sar",
+     0.9721851965946605
+    ],
+    [
+     "jp_igs_radar",
+     1.1921111432568594
+    ],
+    [
+     "cosmo_skymed",
+     1.3165667322863994
+    ],
+    [
+     "kr_sar01",
+     1.3197917453496513
+    ],
+    [
+     "radarsat2",
+     1.6132117614176948
+    ],
+    [
+     "us_sar01",
+     1.7129011221253856
+    ],
+    [
+     "us_sar03",
+     1.8084567902147806
+    ],
+    [
+     "fi_sar02",
+     2.181547652762633
+    ]
+   ],
+   "rank_before": 1,
+   "rank_after": 1,
+   "twin_class": 2,
+   "twin_names": [
+    "cn_yaogan_sar",
+    "jp_igs_radar"
+   ],
+   "prior_applied": false,
+   "changed_top1": false,
+   "t_shortlist": 4.361195087432861,
+   "t_match": 177.9464521408081
+  }
+ ]
+}
