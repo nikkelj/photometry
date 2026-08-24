@@ -40,8 +40,16 @@ python scripts/run_slew_study.py                # pre-burn yaw-around study
 python scripts/make_charts.py; python scripts/make_fleet_charts.py
 python scripts/make_glint_chart.py; python scripts/make_scale_charts.py
 python scripts/make_movies.py                   # all validation movies
+python scripts/catalog_coverage.py              # facet-catalog vs SATCAT snapshot
 python -m pytest tests/
 ```
+
+The spacecraft **facet catalog** (family templates for the active public
+catalog, SATCAT name/COSPAR mapping, thrust vs LVLH, per-facet materials)
+is documented in
+[docs/facet-catalog.md](docs/facet-catalog.md). Study-orbit identification
+still uses the original `shapes.LIBRARY`; new families live in
+`photometry.catalog`.
 
 ---
 
