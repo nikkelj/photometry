@@ -38,6 +38,7 @@ python scripts/run_library_scale.py             # 217-model catalog-scale ID tes
 python scripts/run_observability_trade.py       # constellation-size knee
 python scripts/run_slew_study.py                # pre-burn yaw-around study
 python scripts/run_unified_id.py                # 300-model registry + SATCAT priors
+python scripts/run_spin_net.py                  # learned spin proposer vs grid (needs torch)
 python scripts/make_charts.py; python scripts/make_fleet_charts.py
 python scripts/make_glint_chart.py; python scripts/make_scale_charts.py
 python scripts/make_movies.py                   # all validation movies
@@ -413,6 +414,61 @@ deployables), so the cubesat twin-breaking case cannot be run at
 honest scale. And the yaogan/IGS twin pair shows the intel annex now
 confuses *itself* photometrically — precisely the regime where an
 association prior is the only tie-breaker on offer.
+
+---
+
+## A learned proposer, physics-verified: what a neural net can and cannot do here
+
+The stack's open problems were all *search* failures, never information
+failures (the torque-free truth verifies at cost 1.04 through the fit
+path; the grid search finds the spin pole at 0.1° but takes a minute).
+That is the one place a network earns its keep: **amortize the search
+into a millisecond proposal, then let the forward model verify and
+polish it.** `photometry.learn` is that experiment, deliberately scoped
+so the physics keeps the certificate:
+
+- **Data**: the fleet's *geometry* (who saw the target, when, from
+  where) is reused from existing full-fleet runs and brightness is
+  re-rendered under fresh random truth — an exact-label training example
+  in milliseconds instead of a 170 s simulation.
+- **Model**: a set transformer over detection tokens (permutation-
+  invariant by construction, so it cannot invent the unobservable), 0.5 M
+  parameters, CPU-trained.
+- **Verifier**: every proposal is scored and polished by the *same*
+  Huber/Tobit cost the classical pipeline uses, from the net's start
+  instead of the grid's. The go/no-go metric is therefore honest:
+  *does the net-seeded polish land in the right basin at least as often
+  as the exhaustive grid, in seconds instead of a minute?*
+
+**Iteration log** — the failures are the useful part:
+
+| Iteration | Change | Outcome |
+|---|---|---|
+| 0 | raw window-relative time as a token feature | chance-level on every head after 500 steps: a scalar t cannot express spin phase at the resolution periodicity needs |
+| 0b | multi-scale Fourier time features (16 periods) | still chance: a shallow transformer must *discover* autocorrelation at an unknown lag — precisely what Lomb–Scargle computes exactly and cheaply |
+| 1 | **phase-fold every token at the Tier-0 periodogram period**; period head predicts the harmonic ratio P/P_LS; pole/axis losses masked to Tier-0-solvable windows (only ~45–55 % of random 2 h spin states are periodogram-solvable — many are photometrically quiet) | harmonic-ratio and body-axis heads learn; **the pole head collapses to a mean direction** (all fleet tumblers at the same ~48° raw error) — a unit-vector regression with a masked axial loss on ~7 examples per batch is a hopeless signal |
+| 2 | pole head as **classification over the same ~200-bin axial Fibonacci grid the search sweeps** (multi-hypothesis for free: top-k bins seed the polish); parallel data workers | *pending — see `results/learn/summary.json`* |
+
+**Iteration 1 measured against the grid** (40 held-out windows on shapes
+never trained on; identical cost function from two starting points):
+
+| | net raw | net + polish | grid search |
+|---|---|---|---|
+| pole error, median | 62.8° | 61.8° | **0.1°** |
+| pole error < 2° | 0 % | 2 % | **72 %** (88 % on Tier-0-solvable windows) |
+| body axis correct | 52 % | — | 80 % |
+| wall time, median | 0.05 s | 1.8 s | 9.4 s |
+
+A clean negative result, and the honest reading is structural, not
+merely "needs more training": the pole is the SO(3) part — exactly the
+part amortization exists for — and it is where the learning signal is
+weakest, because only Tier-0-solvable windows carry any pole
+information and the loss must be masked to them. The two heads that
+*did* learn (harmonic ratio, body axis) are the two that a physicist
+would also call easy. What survives regardless of iteration 2's
+outcome: the geometry-pool data generator (a label factory for any
+future learned component) and the verifier discipline — a net proposal
+is never trusted without a physics cost number beside it.
 
 ---
 
