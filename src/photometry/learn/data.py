@@ -27,7 +27,21 @@ from pathlib import Path
 import numpy as np
 
 from ..attitude import PrincipalAxisSpin
-from ..frames import unit, unit_to_radec
+from ..frames import fibonacci_sphere, unit, unit_to_radec
+
+# Pole head as classification over the SAME Fibonacci grid the classical
+# search sweeps (400 directions -> ~200 axial bins after antipodal folding):
+# iteration 1 regressed a unit vector with an axial loss and collapsed to a
+# mean direction. Classification over bins is well-conditioned, gives a
+# multi-hypothesis output for free (top-k bins seed the polish), and
+# matches the search's own discretization.
+_G = fibonacci_sphere(400)
+AXIS_GRID = _G[_G[:, 2] >= 0.0]
+N_POLE_BINS = len(AXIS_GRID)
+
+
+def pole_class(pole: np.ndarray) -> int:
+    return int(np.argmax(np.abs(AXIS_GRID @ pole)))
 from ..measurements import ObservationSet
 from ..radiometry import apparent_magnitude, mag_to_normalized_brightness
 from ..shapes import FacetModel
@@ -225,7 +239,29 @@ def sample_batch(pool, shapes, rng, batch: int, **kw):
             np.stack([e.pole for e in ex]),
             np.array([e.log_period for e in ex], dtype=np.float32),
             np.array([e.axis_idx for e in ex]),
-            np.array([tier0_ok(e.period_s, e.p_ls) for e in ex]))
+            np.array([tier0_ok(e.period_s, e.p_ls) for e in ex]),
+            np.array([pole_class(e.pole) for e in ex]))
+
+
+class SpinExamples:
+    """Iterable dataset of single examples for a multi-worker DataLoader.
+
+    Data generation (forward rendering + the periodogram) was 2/3 of the
+    step time when serial; three worker processes hide it behind the
+    optimizer step. Each worker seeds its own generator from its id."""
+
+    def __init__(self, pool, shapes, seed: int = 0, **kw):
+        self.pool, self.shapes, self.seed, self.kw = pool, shapes, seed, kw
+
+    def __iter__(self):
+        import torch
+        info = torch.utils.data.get_worker_info()
+        wid = info.id if info is not None else 0
+        rng = np.random.default_rng(self.seed * 1000 + wid)
+        while True:
+            e = sample_example(self.pool, self.shapes, rng, **self.kw)
+            yield (e.tokens, e.mask, e.pole, np.float32(e.log_period),
+                   e.axis_idx, tier0_ok(e.period_s, e.p_ls), pole_class(e.pole))
 
 
 def ls_accuracy(pool, shapes, rng, n: int = 100, **kw) -> dict:

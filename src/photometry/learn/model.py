@@ -16,7 +16,7 @@ from __future__ import annotations
 import torch
 from torch import nn
 
-from .data import N_FEATURES
+from .data import N_FEATURES, N_POLE_BINS
 
 
 class SpinNet(nn.Module):
@@ -31,29 +31,31 @@ class SpinNet(nn.Module):
         self.encoder = nn.TransformerEncoder(layer, n_layers)
         self.norm = nn.LayerNorm(d_model)
         self.head = nn.Sequential(nn.Linear(2 * d_model, 256), nn.GELU(),
-                                  nn.Dropout(dropout), nn.Linear(256, 3 + 1 + 3))
+                                  nn.Dropout(dropout),
+                                  nn.Linear(256, N_POLE_BINS + 1 + 3))
 
     def forward(self, tokens: torch.Tensor, mask: torch.Tensor):
-        """tokens (B,N,9), mask (B,N) True=real -> (pole (B,3) unit,
-        log_period (B,), axis_logits (B,3))."""
+        """tokens (B,N,F), mask (B,N) True=real -> (pole_logits (B,C) over
+        the axial Fibonacci grid, log_period_ratio (B,), axis_logits (B,3))."""
         h = self.norm(self.encoder(self.embed(tokens),
                                    src_key_padding_mask=~mask))
         m = mask.unsqueeze(-1).float()
         mean = (h * m).sum(1) / m.sum(1).clamp(min=1.0)
         mx = h.masked_fill(~mask.unsqueeze(-1), -1e4).max(1).values
         out = self.head(torch.cat([mean, mx], dim=-1))
-        pole = nn.functional.normalize(out[:, :3], dim=-1)
-        return pole, out[:, 3], out[:, 4:]
+        c = N_POLE_BINS
+        return out[:, :c], out[:, c], out[:, c + 1:]
 
 
-def spin_loss(pred, pole_true, logp_true, axis_true, geom_mask=None,
+def spin_loss(pred, pole_cls_true, logp_true, axis_true, geom_mask=None,
               w_pole=1.0, w_period=2.0, w_axis=0.5):
-    """Axial pole loss (1 - (p.p_true)^2), smooth-L1 log period, CE axis.
+    """CE over pole bins, smooth-L1 log period ratio, CE axis.
 
     geom_mask (B,) bool restricts the pole/axis terms to examples whose
     phase-fold features are meaningful (Tier-0 found the period)."""
-    pole, logp, axis_logits = pred
-    per_pole = 1.0 - (pole * pole_true).sum(-1) ** 2
+    pole_logits, logp, axis_logits = pred
+    per_pole = nn.functional.cross_entropy(pole_logits, pole_cls_true,
+                                           reduction="none")
     per_axis = nn.functional.cross_entropy(axis_logits, axis_true, reduction="none")
     if geom_mask is not None and geom_mask.any():
         m = geom_mask.float()

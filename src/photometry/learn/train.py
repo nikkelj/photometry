@@ -10,16 +10,21 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .data import GeometryPool, sample_batch
+from .data import GeometryPool, SpinExamples
 from .model import SpinNet, spin_loss
 
 
 def train(pool: GeometryPool, shapes, out_dir: Path, steps: int = 3000,
           batch: int = 32, n_tokens: int = 256, width_s: float = 7200.0,
           lr: float = 1e-3, seed: int = 0, log_every: int = 100,
-          model_kw: dict | None = None) -> tuple[SpinNet, list[dict]]:
+          model_kw: dict | None = None, n_workers: int = 3) -> tuple[SpinNet, list[dict]]:
     torch.manual_seed(seed)
-    rng = np.random.default_rng(seed)
+    torch.set_num_threads(max(1, 4 - n_workers))  # leave cores to the workers
+    loader = torch.utils.data.DataLoader(
+        SpinExamples(pool, shapes, seed=seed, n_tokens=n_tokens, width_s=width_s),
+        batch_size=batch, num_workers=n_workers, prefetch_factor=4,
+        persistent_workers=n_workers > 0)
+    batches = iter(loader)
     model = SpinNet(**(model_kw or {}))
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     warm = max(1, steps // 20)
@@ -34,14 +39,10 @@ def train(pool: GeometryPool, shapes, out_dir: Path, steps: int = 3000,
     for step in range(steps):
         for g in opt.param_groups:
             g["lr"] = lr_at(step)
-        tok, mask, pole, logp, axis, ok = sample_batch(pool, shapes, rng, batch,
-                                                       n_tokens=n_tokens,
-                                                       width_s=width_s)
-        pred = model(torch.from_numpy(tok), torch.from_numpy(mask))
-        loss, parts = spin_loss(pred, torch.from_numpy(pole),
-                                torch.from_numpy(logp), torch.from_numpy(axis),
-                                torch.from_numpy(ok))
-        parts["tier0_frac"] = float(ok.mean())
+        tok, mask, _pole, logp, axis, ok, pole_cls = next(batches)
+        pred = model(tok, mask)
+        loss, parts = spin_loss(pred, pole_cls, logp, axis, ok)
+        parts["tier0_frac"] = float(ok.float().mean())
         opt.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)

@@ -22,7 +22,8 @@ from ..frames import unit, unit_to_radec
 from ..inversion.periodogram import best_period, brightness_periodogram
 from ..inversion.pole_search import _cost, grid_search_pole, pole_error_deg
 from ..measurements import ObservationSet
-from .data import AXES, GeometryPool, random_spin, render_window, tokens_from_obs
+from .data import (AXES, AXIS_GRID, GeometryPool, random_spin, render_window,
+                   tokens_from_obs)
 from .model import SpinNet
 
 
@@ -41,14 +42,17 @@ class Proposal:
     axis_probs: np.ndarray
     t_ms: float
     p_ls: float = 0.0
+    pole_candidates: np.ndarray | None = None   # (k,3) top-k bins, best first
+    pole_probs: np.ndarray | None = None        # (k,)
 
 
 @torch.no_grad()
 def propose(model: SpinNet, obs: ObservationSet, width_s: float,
             n_tokens: int, rng: np.random.Generator,
-            n_draws: int = 4) -> Proposal:
-    """Net proposal for one window, averaged over token subsamples:
-    poles combine axially (principal eigenvector of sum p p^T)."""
+            n_draws: int = 4, top_k: int = 4) -> Proposal:
+    """Net proposal for one window: pole posterior over the axial grid
+    (averaged over token subsamples) -> top-k candidate poles; period =
+    Tier-0 period x predicted harmonic ratio; body-axis class."""
     t0 = float(obs.t_s.min())
     tic = time.time()
     poles, logps, probs = [], [], []
@@ -62,18 +66,20 @@ def propose(model: SpinNet, obs: ObservationSet, width_s: float,
         p_ls = None
     for _ in range(n_draws):
         tok, mask, p_ls = tokens_from_obs(obs, t0, width_s, n_tokens, rng, p_ls)
-        p, lp, ax = model(torch.from_numpy(tok[None]), torch.from_numpy(mask[None]))
-        poles.append(p[0].numpy())
+        pl, lp, ax = model(torch.from_numpy(tok[None]), torch.from_numpy(mask[None]))
+        poles.append(torch.log_softmax(pl[0], -1).numpy())
         logps.append(float(lp[0]))
         probs.append(torch.softmax(ax[0], -1).numpy())
-    P = np.stack(poles)
-    w, v = np.linalg.eigh(P.T @ P)
-    pole = unit(v[:, -1])
+    # pole posterior over the axial grid, averaged over token subsamples
+    logp_pole = np.mean(poles, axis=0)
+    order = np.argsort(logp_pole)[::-1][:top_k]
+    cands = AXIS_GRID[order]
+    cand_p = np.exp(logp_pole[order] - np.logaddexp.reduce(logp_pole))
     pr = np.mean(probs, axis=0)
     # period = periodogram period x the net's harmonic correction
     period = p_ls * float(np.exp(np.median(logps)))
-    return Proposal(pole, period, int(np.argmax(pr)), pr,
-                    (time.time() - tic) * 1e3, float(p_ls))
+    return Proposal(cands[0], period, int(np.argmax(pr)), pr,
+                    (time.time() - tic) * 1e3, float(p_ls), cands, cand_p)
 
 
 def _prep(obs: ObservationSet, max_obs: int, rng: np.random.Generator):
@@ -94,15 +100,20 @@ def polish(obs: ObservationSet, shape, prop: Proposal,
     o, meas, w = _prep(obs, max_obs, rng)
     axis = AXES[prop.axis_idx]
     tic = time.time()
+    cands = (prop.pole_candidates if prop.pole_candidates is not None
+             else prop.pole[None, :])
+    # multi-hypothesis seed: top-k pole bins x harmonics x phases, one
+    # forward-model cost each (a few dozen evaluations — still seconds)
     best = (np.inf, None)
-    for h in harmonics:
-        per = prop.period_s * h
-        for ph in np.linspace(0, 2 * np.pi, n_phases, endpoint=False):
-            c = _cost(shape, prop.pole, per, ph, o, meas, w, axis, offset_sigma)
-            if c < best[0]:
-                best = (c, (per, ph))
-    per0, ph0 = best[1]
-    ra0, dec0 = unit_to_radec(prop.pole)
+    for pole_c in cands:
+        for h in harmonics:
+            per = prop.period_s * h
+            for ph in np.linspace(0, 2 * np.pi, n_phases, endpoint=False):
+                c = _cost(shape, pole_c, per, ph, o, meas, w, axis, offset_sigma)
+                if c < best[0]:
+                    best = (c, (pole_c, per, ph))
+    pole_seed, per0, ph0 = best[1]
+    ra0, dec0 = unit_to_radec(pole_seed)
 
     def f(x):
         ra, dec, per, ph = x
