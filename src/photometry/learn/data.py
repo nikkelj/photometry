@@ -32,8 +32,22 @@ from ..measurements import ObservationSet
 from ..radiometry import apparent_magnitude, mag_to_normalized_brightness
 from ..shapes import FacetModel
 
-N_FEATURES = 9
 AXES = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
+
+# Multi-scale Fourier features of time. A raw scalar t cannot express spin
+# phase at the ~1% resolution periodicity detection needs (the first run
+# sat at chance for 500 steps); sin/cos at log-spaced periods spanning the
+# spin range up to the window length give every token an explicit phase
+# coordinate at every scale of interest.
+FOURIER_PERIODS_S = np.exp(np.linspace(np.log(20.0), np.log(7200.0), 16))
+N_BASE = 9
+N_FEATURES = N_BASE + 2 * len(FOURIER_PERIODS_S)
+
+
+def time_features(t_rel: np.ndarray) -> np.ndarray:
+    """(K, 2*n_periods) sin/cos of window-relative time at each scale."""
+    ang = 2 * np.pi * t_rel[:, None] / FOURIER_PERIODS_S[None, :]
+    return np.concatenate([np.sin(ang), np.cos(ang)], axis=1)
 
 
 @dataclass
@@ -129,7 +143,8 @@ def tokens_from_rows(t: np.ndarray, sun: np.ndarray, u_obs: np.ndarray,
     ok = ~cens.astype(bool)
     med = np.median(m_n[ok]) if ok.any() else np.median(m_n)
     feats = np.column_stack([
-        (t - t0) / width_s, sun, u_obs, (m_n - med) / 2.0, cens.astype(float)])
+        (t - t0) / width_s, sun, u_obs, (m_n - med) / 2.0, cens.astype(float),
+        time_features(t - t0)])
     out = np.zeros((n_tokens, N_FEATURES), dtype=np.float32)
     mask = np.zeros(n_tokens, dtype=bool)
     out[:len(feats)] = feats
