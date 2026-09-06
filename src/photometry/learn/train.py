@@ -10,8 +10,29 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .data import GeometryPool, SpinExamples
+from .data import GeometryPool, pole_class, sample_example, tier0_ok
 from .model import SpinNet, spin_loss
+
+
+class SpinExamples(torch.utils.data.IterableDataset):
+    """Infinite stream of single examples for a multi-worker DataLoader.
+
+    Data generation (forward rendering + the periodogram) was 2/3 of the
+    step time when serial; worker processes hide it behind the optimizer
+    step. Each worker seeds its own generator from its id."""
+
+    def __init__(self, pool, shapes, seed: int = 0, **kw):
+        super().__init__()
+        self.pool, self.shapes, self.seed, self.kw = pool, shapes, seed, kw
+
+    def __iter__(self):
+        info = torch.utils.data.get_worker_info()
+        wid = info.id if info is not None else 0
+        rng = np.random.default_rng(self.seed * 1000 + wid)
+        while True:
+            e = sample_example(self.pool, self.shapes, rng, **self.kw)
+            yield (e.tokens, e.mask, e.pole, np.float32(e.log_period),
+                   e.axis_idx, tier0_ok(e.period_s, e.p_ls), pole_class(e.pole))
 
 
 def train(pool: GeometryPool, shapes, out_dir: Path, steps: int = 3000,
