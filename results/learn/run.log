@@ -6,3 +6,9 @@ Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pyto
   rec = dict(step=step, loss=float(loss), **parts,
 step     0 loss 7.4684 pole 5.1084 period 0.9057 axis 1.0972 [3s]
 step   100 loss 7.2360 pole 5.3269 period 0.6903 axis 1.0570 [139s]
+step   200 loss 6.6854 pole 5.3345 period 0.4148 axis 1.0428 [268s]
+step   300 loss 6.8670 pole 5.1897 period 0.5487 axis 1.1597 [397s]
+step   400 loss 6.1600 pole 5.1293 period 0.3047 axis 0.8428 [529s]
+step   500 loss 6.8637 pole 5.4337 period 0.4810 axis 0.9361 [659s]
+step   600 loss 6.6696 pole 5.2173 period 0.4693 axis 1.0274 [788s]
+step   700 loss 6.6272 pole 5.3043 period 0.4277 axis 0.9351 [959s]

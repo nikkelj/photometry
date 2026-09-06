@@ -1,0 +1,14 @@
+Memorization diagnostic (iteration 2 architecture: pole classification over
+200 axial bins, phase-folded tokens), 24 fixed Tier-0-solvable examples,
+katalyst_link + box_wing, Adam 1e-3, 1 CPU thread:
+
+step   0 pole CE 5.308 top1 acc 0.00 period 0.336 axis 1.106
+step  50 pole CE 3.108 top1 acc 0.12 period 0.157 axis 1.015
+step 100 pole CE 0.357 top1 acc 1.00 period 0.065 axis 0.175
+step 150 pole CE 0.028 top1 acc 1.00 period 0.058 axis 0.009
+step 300 pole CE 0.006 top1 acc 1.00 period 0.013 axis 0.002
+
+Reading: the data pipeline, labels, and heads are consistent (the net can
+represent and fit the pole mapping). The flat pole loss in the streaming
+run (CE ~5.2 vs chance 5.30 at step 600 = ~7k pole-labeled examples) is
+therefore generalization/data starvation on a CPU budget, not a bug.
