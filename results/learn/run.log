@@ -5,3 +5,6 @@ geometry pool: 106692 rows from 4 runs
 Consider using tensor.detach() first. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:820.)
   rec = dict(step=step, loss=float(loss), **parts,
 step     0 loss 3.6031 pole 0.8965 period 1.0929 axis 1.0416 [1s]
+step   100 loss 1.9884 pole 0.6203 period 0.4746 axis 0.8379 [76s]
+step   200 loss 2.0546 pole 0.4959 period 0.5147 axis 1.0584 [150s]
+step   300 loss 2.6857 pole 0.3844 period 0.8339 axis 1.2669 [223s]
