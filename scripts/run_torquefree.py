@@ -36,9 +36,7 @@ S2_ORANGE = "#d95926"
 SCENARIO = "katalyst_link__multiaxis_tumble"
 
 
-def att_err_deg(r_a, r_b):
-    c = (np.trace(r_a @ r_b.T) - 1) / 2
-    return float(np.degrees(np.arccos(np.clip(c, -1, 1))))
+from photometry.studies import attitude_error_deg as att_err_deg
 
 
 def main() -> None:

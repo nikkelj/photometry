@@ -25,14 +25,11 @@ from pathlib import Path
 import numpy as np
 
 from photometry import scenarios as sc
-from photometry.attitude import FixedInertial, LvlhHold, PrincipalAxisSpin
-from photometry.constellation import WalkerConstellation
-from photometry.frames import radec_to_unit, unit_to_radec
 from photometry.inversion.model_match import best_per_model, match_library
 from photometry.inversion.periodogram import best_period, brightness_periodogram
 from photometry.inversion.prefilter import model_features, shortlist_library
 from photometry.library200 import full_library
-from photometry.sensing import SensorConfig, simulate_detections
+from photometry.studies import make_truth_attitude, simulate_target
 
 OUT = Path("results/library_scale")
 N_GENERATED = 20
@@ -91,26 +88,6 @@ def sample_targets(seed: int = 42) -> list[dict]:
     return targets
 
 
-def make_truth_attitude(mode: str, orbit, sun, rng: np.random.Generator):
-    if mode == "ops":
-        return LvlhHold(orbit)
-    if mode == "low_drag":
-        return LvlhHold(orbit, roll_deg=90.0)
-    if mode in ("sun_point", "safe_sun"):
-        return FixedInertial.z_toward(sun)
-    if mode == "science":
-        return FixedInertial.pointing(rng.uniform(0, 360), rng.uniform(-60, 60))
-    if mode == "tumble":
-        pole = rng.normal(size=3)
-        ra, dec = unit_to_radec(pole / np.linalg.norm(pole))
-        period = float(rng.uniform(40.0, 500.0))
-        axis = [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)][rng.integers(3)]
-        return PrincipalAxisSpin(float(ra), float(dec), period,
-                                 float(rng.uniform(0, 2 * np.pi)),
-                                 body_axis=axis)
-    raise ValueError(mode)
-
-
 def run_target(t: dict) -> dict:
     global _LIB, _META, _CACHE
     lib = _LIB
@@ -122,14 +99,9 @@ def run_target(t: dict) -> dict:
     offset = 25.0 if t["array_mode"] == "offset" else 0.0
 
     t0 = time.time()
-    constellation = WalkerConstellation(100, 100, 550.0, 53.0)
-    t_grid = np.arange(0.0, DURATION_S, DT_S)
-    try:
-        obs = simulate_detections(constellation, orbit, shape, att, sun,
-                                  t_grid, SensorConfig(), rng,
-                                  articulate=articulate,
-                                  articulate_offset_deg=offset)
-    except RuntimeError:
+    obs = simulate_target(shape, att, rng, DURATION_S, DT_S,
+                          articulate=articulate, articulate_offset_deg=offset)
+    if obs is None:
         return dict(t, status="undetectable", n_rows=0)
     t_sim = time.time() - t0
 

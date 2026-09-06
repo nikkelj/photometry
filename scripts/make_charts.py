@@ -9,57 +9,18 @@ import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
 import matplotlib as mpl
 
 mpl.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import LinearSegmentedColormap
 
 from photometry.measurements import ObservationSet
 
 # Dark-mode chart tokens (validated reference palette)
-SURFACE = "#1a1a19"
-INK = "#ffffff"
-INK_2 = "#c3c2b7"
-MUTED = "#898781"
-GRID = "#2c2c2a"
-BASELINE = "#383835"
-S1_BLUE = "#3987e5"
-S2_ORANGE = "#d95926"
-S3_AQUA = "#199e70"
-
-# single-hue sequential ramp (blue), dark-mode: low recedes to surface, high pops
-SEQ_STEPS = ["#0d366b", "#104281", "#184f95", "#1c5cab", "#256abf",
-             "#2a78d6", "#3987e5", "#5598e7", "#6da7ec", "#86b6ef",
-             "#9ec5f4", "#b7d3f6", "#cde2fb"]
-SEQ_CMAP = LinearSegmentedColormap.from_list("seq_blue_dark", SEQ_STEPS)
-
-
-def style() -> None:
-    mpl.rcParams.update({
-        "figure.facecolor": SURFACE,
-        "axes.facecolor": SURFACE,
-        "savefig.facecolor": SURFACE,
-        "text.color": INK,
-        "axes.labelcolor": INK_2,
-        "axes.edgecolor": BASELINE,
-        "axes.titlecolor": INK,
-        "xtick.color": MUTED,
-        "ytick.color": MUTED,
-        "axes.grid": True,
-        "grid.color": GRID,
-        "grid.linewidth": 0.6,
-        "axes.axisbelow": True,
-        "axes.spines.top": False,
-        "axes.spines.right": False,
-        "font.family": "sans-serif",
-        "font.size": 11,
-        "axes.titlesize": 13,
-        "figure.titlesize": 15,
-        "legend.frameon": False,
-        "legend.labelcolor": INK_2,
-    })
+from photometry.charts import *  # noqa: F401,F403  (shared palette + style)
 
 
 def lonlat(u: np.ndarray) -> tuple[np.ndarray, np.ndarray]:

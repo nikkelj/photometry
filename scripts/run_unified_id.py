@@ -32,14 +32,12 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from photometry import scenarios as sc
-from photometry.attitude import LvlhHold, PrincipalAxisSpin
-from photometry.constellation import WalkerConstellation
 from photometry.inversion.model_match import best_per_model, match_library
 from photometry.inversion.periodogram import best_period, brightness_periodogram
 from photometry.inversion.prefilter import shortlist_library
 from photometry.registry import (rerank_with_prior, satcat_prior,
                                  seed_shortlist, unified_library)
-from photometry.sensing import SensorConfig, simulate_detections
+from photometry.studies import make_truth_attitude, simulate_target
 
 DURATION_S = 3 * 3600.0
 DT_S = 6.0
@@ -56,19 +54,6 @@ CASES = [
 ]
 
 
-def make_attitude(mode: str, orbit, rng):
-    if mode == "ops":
-        return LvlhHold(orbit)
-    pole = rng.normal(size=3)
-    pole /= np.linalg.norm(pole)
-    from photometry.frames import unit_to_radec
-    ra, dec = unit_to_radec(pole)
-    return PrincipalAxisSpin(float(ra), float(dec),
-                             float(rng.uniform(60.0, 300.0)),
-                             float(rng.uniform(0, 2 * np.pi)),
-                             body_axis=(1.0, 0.0, 0.0))
-
-
 def main() -> None:
     out_dir = Path("results/unified_id")
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -80,14 +65,10 @@ def main() -> None:
     for i, case in enumerate(CASES):
         rng = np.random.default_rng(300 + i)
         shape = lib[case["truth"]]()
-        att = make_attitude(case["mode"], orbit, rng)
-        constellation = WalkerConstellation(100, 100, 550.0, 53.0)
-        t_grid = np.arange(0.0, DURATION_S, DT_S)
-        try:
-            obs = simulate_detections(constellation, orbit, shape, att, sun,
-                                      t_grid, SensorConfig(), rng,
-                                      articulate=shape.articulated)
-        except RuntimeError:
+        att = make_truth_attitude(case["mode"], orbit, sun, rng,
+                                  period_range=(60.0, 300.0))
+        obs = simulate_target(shape, att, rng, DURATION_S, DT_S)
+        if obs is None:
             rows.append(dict(case=case, status="undetectable", n_rows=0))
             print(f"{case['truth']:16s} {case['mode']:6s} UNDETECTABLE "
                   "(below limiting magnitude)", flush=True)

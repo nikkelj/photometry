@@ -6,39 +6,19 @@ import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
 import matplotlib as mpl
 
 mpl.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import LinearSegmentedColormap
 
 from photometry.shapes import GIMBAL_FIXED, LIBRARY
 
-SURFACE = "#1a1a19"
-INK = "#ffffff"
-INK_2 = "#c3c2b7"
-MUTED = "#898781"
-GRID = "#2c2c2a"
-BASELINE = "#383835"
-S1_BLUE = "#3987e5"
-S2_ORANGE = "#d95926"
-S3_AQUA = "#199e70"
-SEQ = LinearSegmentedColormap.from_list("seq", [
-    "#0d366b", "#1c5cab", "#2a78d6", "#5598e7", "#86b6ef", "#cde2fb"])
+from photometry.charts import *  # noqa: F401,F403  (shared palette + style)
 
 HYPS = ["lvlh_ops", "lvlh_low_drag", "sun_point", "spin_fit", "inertial_fit"]
-
-
-def style():
-    mpl.rcParams.update({
-        "figure.facecolor": SURFACE, "axes.facecolor": SURFACE,
-        "savefig.facecolor": SURFACE, "text.color": INK,
-        "axes.labelcolor": INK_2, "axes.edgecolor": BASELINE,
-        "xtick.color": MUTED, "ytick.color": MUTED,
-        "axes.grid": False, "font.size": 10, "axes.titlesize": 12,
-        "legend.frameon": False, "legend.labelcolor": INK_2,
-    })
 
 
 def load_rows(fleet_dir: Path) -> list[dict]:

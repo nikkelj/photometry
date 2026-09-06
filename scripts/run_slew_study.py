@@ -41,11 +41,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from photometry import scenarios as sc
 from photometry.attitude import LvlhHold, LvlhYawSlew
-from photometry.constellation import WalkerConstellation
 from photometry.inversion.cost import huber_mag_cost, prepare_meas
 from photometry.library200 import full_library
 from photometry.measurements import ObservationSet
-from photometry.sensing import SensorConfig, simulate_detections
+from photometry.studies import simulate_target
 
 DURATION_S = 3 * 3600.0
 DT_S = 6.0
@@ -164,12 +163,9 @@ def run_case(lib, name: str, yaw: float | None, seed=99) -> dict:
         att_true = LvlhYawSlew(orbit, yaw, T_START, SLEW_S, HOLD_S)
         label = f"{name}__yaw{int(yaw)}"
     rng = np.random.default_rng(seed)
-    constellation = WalkerConstellation(100, 100, 550.0, 53.0)
-    t_grid = np.arange(0.0, DURATION_S, DT_S)
     t0 = time.time()
-    obs = simulate_detections(constellation, orbit, shape, att_true, sun,
-                              t_grid, SensorConfig(), rng,
-                              articulate=articulate)
+    obs = simulate_target(shape, att_true, rng, DURATION_S, DT_S,
+                          articulate=articulate)
     t_sim = time.time() - t0
 
     nominal = LvlhHold(orbit)

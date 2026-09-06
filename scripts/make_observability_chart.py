@@ -14,29 +14,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-SURFACE = "#1a1a19"
-INK = "#ffffff"
-INK_2 = "#c3c2b7"
-MUTED = "#898781"
-GRID = "#2c2c2a"
-BASELINE = "#383835"
-S1_BLUE = "#3987e5"
-S2_ORANGE = "#d95926"
-S3_AQUA = "#1baf7a"
-S4_MAGENTA = "#d55181"
-S5_YELLOW = "#c98500"
-
-
-def style():
-    mpl.rcParams.update({
-        "figure.facecolor": SURFACE, "axes.facecolor": SURFACE,
-        "savefig.facecolor": SURFACE, "text.color": INK,
-        "axes.labelcolor": INK_2, "axes.edgecolor": BASELINE,
-        "xtick.color": MUTED, "ytick.color": MUTED, "font.size": 10,
-        "axes.grid": True, "grid.color": GRID, "grid.linewidth": 0.6,
-        "legend.frameon": False, "legend.labelcolor": INK_2,
-        "axes.spines.top": False, "axes.spines.right": False,
-    })
+from photometry.charts import *  # noqa: F401,F403  (shared palette + style)
 
 
 def by_size(rows, key, agg=np.median):
