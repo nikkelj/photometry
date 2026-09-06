@@ -68,7 +68,7 @@ def main() -> None:
     ax = axes[1, 0]
     t_net = [r["net_polished"]["t_total_s"] for r in synth]
     t_grid = [r["grid"]["t_s"] for r in synth]
-    ax.boxplot([t_net, t_grid], labels=["net + polish", "grid search"],
+    ax.boxplot([t_net, t_grid], tick_labels=["net + polish", "grid search"],
                medianprops=dict(color=S5_YELLOW),
                boxprops=dict(color=INK_2), whiskerprops=dict(color=MUTED),
                capprops=dict(color=MUTED), flierprops=dict(markeredgecolor=MUTED))
@@ -110,7 +110,7 @@ def main() -> None:
     ax.text(0.02, 0.95, "\n".join(lines), va="top", ha="left", fontsize=11,
             color=INK_2, family="monospace", transform=ax.transAxes)
 
-    fig.suptitle("Learned spin-state proposer (set transformer, 0.48 M params, CPU) "
+    fig.suptitle("Learned spin-state proposer (set transformer, ~0.5 M params, CPU) "
                  "— the net proposes, the forward model verifies and polishes",
                  fontweight="bold", fontsize=13)
     out = Path("results/charts/19_spin_net.png")
