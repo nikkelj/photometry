@@ -46,13 +46,22 @@ class SpinNet(nn.Module):
         return pole, out[:, 3], out[:, 4:]
 
 
-def spin_loss(pred, pole_true, logp_true, axis_true,
+def spin_loss(pred, pole_true, logp_true, axis_true, geom_mask=None,
               w_pole=1.0, w_period=2.0, w_axis=0.5):
-    """Axial pole loss (1 - (p.p_true)^2), smooth-L1 log period, CE axis."""
+    """Axial pole loss (1 - (p.p_true)^2), smooth-L1 log period, CE axis.
+
+    geom_mask (B,) bool restricts the pole/axis terms to examples whose
+    phase-fold features are meaningful (Tier-0 found the period)."""
     pole, logp, axis_logits = pred
-    l_pole = (1.0 - (pole * pole_true).sum(-1) ** 2).mean()
+    per_pole = 1.0 - (pole * pole_true).sum(-1) ** 2
+    per_axis = nn.functional.cross_entropy(axis_logits, axis_true, reduction="none")
+    if geom_mask is not None and geom_mask.any():
+        m = geom_mask.float()
+        l_pole = (per_pole * m).sum() / m.sum()
+        l_axis = (per_axis * m).sum() / m.sum()
+    else:
+        l_pole, l_axis = per_pole.mean(), per_axis.mean()
     l_period = nn.functional.smooth_l1_loss(logp, logp_true, beta=0.1)
-    l_axis = nn.functional.cross_entropy(axis_logits, axis_true)
     total = w_pole * l_pole + w_period * l_period + w_axis * l_axis
     return total, dict(pole=float(l_pole.detach()), period=float(l_period.detach()),
                        axis=float(l_axis.detach()))

@@ -207,12 +207,25 @@ def tokens_from_obs(obs: ObservationSet, t0: float, width_s: float,
                             p_ls)
 
 
+def tier0_ok(period_true: float, p_ls: float, tol: float = 0.01) -> bool:
+    """Did the periodogram land within tol of the period or a harmonic?"""
+    r = period_true / p_ls
+    return bool(min(abs(r * h - 1.0) for h in (1.0, 0.5, 2.0)) < tol)
+
+
 def sample_batch(pool, shapes, rng, batch: int, **kw):
+    """Batch arrays: tokens, mask, pole, log-ratio, axis, tier0_ok.
+
+    tier0_ok flags windows where the periodogram found the period (or a
+    harmonic): only there are the phase-fold features meaningful, so the
+    pole/axis losses are masked to those examples — elsewhere they would
+    be pure label noise. The period-ratio head trains on every example."""
     ex = [sample_example(pool, shapes, rng, **kw) for _ in range(batch)]
     return (np.stack([e.tokens for e in ex]), np.stack([e.mask for e in ex]),
             np.stack([e.pole for e in ex]),
             np.array([e.log_period for e in ex], dtype=np.float32),
-            np.array([e.axis_idx for e in ex]))
+            np.array([e.axis_idx for e in ex]),
+            np.array([tier0_ok(e.period_s, e.p_ls) for e in ex]))
 
 
 def ls_accuracy(pool, shapes, rng, n: int = 100, **kw) -> dict:

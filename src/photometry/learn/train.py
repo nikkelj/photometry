@@ -34,12 +34,14 @@ def train(pool: GeometryPool, shapes, out_dir: Path, steps: int = 3000,
     for step in range(steps):
         for g in opt.param_groups:
             g["lr"] = lr_at(step)
-        tok, mask, pole, logp, axis = sample_batch(pool, shapes, rng, batch,
-                                                   n_tokens=n_tokens,
-                                                   width_s=width_s)
+        tok, mask, pole, logp, axis, ok = sample_batch(pool, shapes, rng, batch,
+                                                       n_tokens=n_tokens,
+                                                       width_s=width_s)
         pred = model(torch.from_numpy(tok), torch.from_numpy(mask))
         loss, parts = spin_loss(pred, torch.from_numpy(pole),
-                                torch.from_numpy(logp), torch.from_numpy(axis))
+                                torch.from_numpy(logp), torch.from_numpy(axis),
+                                torch.from_numpy(ok))
+        parts["tier0_frac"] = float(ok.mean())
         opt.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)

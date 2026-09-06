@@ -56,7 +56,8 @@ def fleet_truth() -> PrincipalAxisSpin:
 def main() -> None:
     global WIDTH_S
     ap = argparse.ArgumentParser()
-    ap.add_argument("--steps", type=int, default=2500)
+    ap.add_argument("--steps", type=int, default=2000)
+    ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--skip-train", action="store_true")
     ap.add_argument("--n-synth", type=int, default=40)
     ap.add_argument("--tf", action="store_true")
@@ -76,8 +77,8 @@ def main() -> None:
     if not args.skip_train:
         from photometry.learn.train import train
         shapes = [lib[n]() for n in TRAIN_SHAPES]
-        train(pool, shapes, OUT, steps=args.steps, n_tokens=N_TOKENS,
-              width_s=WIDTH_S)
+        train(pool, shapes, OUT, steps=args.steps, batch=args.batch,
+              n_tokens=N_TOKENS, width_s=WIDTH_S)
     model = load_model(OUT / "spin_net.pt")
 
     rng = np.random.default_rng(1234)

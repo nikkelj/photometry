@@ -52,7 +52,14 @@ def propose(model: SpinNet, obs: ObservationSet, width_s: float,
     t0 = float(obs.t_s.min())
     tic = time.time()
     poles, logps, probs = [], [], []
-    p_ls = None
+    # full Tier-0 statistic (arc-sized grid, all calibrated rows) — the same
+    # periodogram the classical baseline gets; training used a row-capped
+    # coarse-grid version for speed
+    if len(obs.uncensored()) >= 8:
+        periods, power = brightness_periodogram(obs, period_range_s=(20.0, 900.0))
+        p_ls = best_period(periods, power)
+    else:
+        p_ls = None
     for _ in range(n_draws):
         tok, mask, p_ls = tokens_from_obs(obs, t0, width_s, n_tokens, rng, p_ls)
         p, lp, ax = model(torch.from_numpy(tok[None]), torch.from_numpy(mask[None]))

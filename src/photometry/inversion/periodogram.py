@@ -52,12 +52,23 @@ def _ls_grid(t: np.ndarray, y_mag: np.ndarray, period_range_s, n_periods=4000,
     return 1.0 / freqs, power
 
 
-def _ls_peak(t: np.ndarray, y_mag: np.ndarray, period_range_s) -> float:
+def _ls_peak(t: np.ndarray, y_mag: np.ndarray, period_range_s,
+             max_rows: int = 600, n_periods: int = 800,
+             oversample: float = 2.0) -> float:
     """Peak period for raw (t, magnitude) arrays — the Tier-0 statistic
-    without an ObservationSet (used by the learned proposer's tokens)."""
+    without an ObservationSet (used by the learned proposer's tokens).
+
+    Row-capped (evenly strided) and grid-coarsened: scipy's Lomb-Scargle
+    is O(rows x frequencies) with trig per pair, and at training-data
+    rates (~thousands of windows) the full grid dominated the step time
+    9:1. A strong spin line is found just as well from 600 rows."""
     if len(t) < 8:
         return float(np.sqrt(period_range_s[0] * period_range_s[1]))
-    periods, power = _ls_grid(t, y_mag, period_range_s, n_periods=1500)
+    if len(t) > max_rows:
+        pick = np.linspace(0, len(t) - 1, max_rows).astype(int)
+        t, y_mag = t[pick], y_mag[pick]
+    periods, power = _ls_grid(t, y_mag, period_range_s, n_periods=n_periods,
+                              oversample=oversample)
     return best_period(periods, power)
 
 
