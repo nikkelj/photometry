@@ -283,6 +283,21 @@ s.addText([
   { text: "windowed z + yaw track is the robust detector; the parametric slew fit is the refinement.", options: {} },
 ], { x: 8.75, y: 1.65, w: 4.1, h: 5.6, fontSize: 11, color: INK2, margin: 0, valign: "top" });
 
+// ------------------------------------- 11f. learned proposer
+s = pres.addSlide();
+base(s, "results — a learned proposer", "Neural net: proposes in milliseconds, physics verifies — an honest negative so far");
+img(s, CHARTS + "/19_spin_net.png", 0.55, 1.5, 8.0, 5.7);
+s.addText([
+  { text: "Where a net could earn its keep: ", options: { bold: true, color: BLUE } },
+  { text: "every open problem was a search failure, never an information failure. Set transformer over detection tokens (0.5 M params), trained on a geometry-pool label factory (ms per exact-label example), proposals polished by the SAME forward-model cost the grid uses.\n\n", options: {} },
+  { text: "Iteration log: ", options: { bold: true, color: ORANGE } },
+  { text: "raw time → chance; Fourier time → chance (a shallow net must rediscover autocorrelation — the periodogram's job); phase-fold at the Tier-0 period → harmonic & body-axis heads learn, pole head collapses; pole classification over the search grid → memorizes 24 examples perfectly, still chance on the stream.\n\n", options: {} },
+  { text: "Measured: ", options: { bold: true, color: MAGENTA } },
+  { text: "net-seeded polish < 2° on 2% of held-out windows vs 72% for the grid (1.8 s vs 9 s). The SO(3) pole is exactly the part amortization exists for, and exactly where the label signal is thinnest (only Tier-0-solvable windows carry it).\n\n", options: {} },
+  { text: "Verdict: ", options: { bold: true, color: AQUA } },
+  { text: "pipeline verified sound; data/compute-starved on CPU (~10 labeled examples per step vs a 200-way geometric classification). Kept: the label factory and the verifier discipline.", options: {} },
+], { x: 8.75, y: 1.65, w: 4.1, h: 5.65, fontSize: 10.5, color: INK2, margin: 0, valign: "top" });
+
 // ------------------------------------------------- 12. movies
 s = pres.addSlide();
 base(s, "results — validation movies", "Watching the inversion against nav truth");
