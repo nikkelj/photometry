@@ -40,6 +40,7 @@ class Proposal:
     axis_idx: int
     axis_probs: np.ndarray
     t_ms: float
+    p_ls: float = 0.0
 
 
 @torch.no_grad()
@@ -51,8 +52,9 @@ def propose(model: SpinNet, obs: ObservationSet, width_s: float,
     t0 = float(obs.t_s.min())
     tic = time.time()
     poles, logps, probs = [], [], []
+    p_ls = None
     for _ in range(n_draws):
-        tok, mask = tokens_from_obs(obs, t0, width_s, n_tokens, rng)
+        tok, mask, p_ls = tokens_from_obs(obs, t0, width_s, n_tokens, rng, p_ls)
         p, lp, ax = model(torch.from_numpy(tok[None]), torch.from_numpy(mask[None]))
         poles.append(p[0].numpy())
         logps.append(float(lp[0]))
@@ -61,8 +63,10 @@ def propose(model: SpinNet, obs: ObservationSet, width_s: float,
     w, v = np.linalg.eigh(P.T @ P)
     pole = unit(v[:, -1])
     pr = np.mean(probs, axis=0)
-    return Proposal(pole, float(np.exp(np.median(logps))), int(np.argmax(pr)),
-                    pr, (time.time() - tic) * 1e3)
+    # period = periodogram period x the net's harmonic correction
+    period = p_ls * float(np.exp(np.median(logps)))
+    return Proposal(pole, period, int(np.argmax(pr)), pr,
+                    (time.time() - tic) * 1e3, float(p_ls))
 
 
 def _prep(obs: ObservationSet, max_obs: int, rng: np.random.Generator):
@@ -171,7 +175,11 @@ def evaluate_case(model: SpinNet, obs: ObservationSet, shape,
     prop = propose(model, obs, width_s, n_tokens, rng)
     raw = dict(pole=prop.pole, period_s=prop.period_s, axis=AXES[prop.axis_idx],
                cost=np.nan, t_s=prop.t_ms / 1e3)
-    out = dict(n_rows=len(obs), net_raw=score(raw, truth))
+    out = dict(n_rows=len(obs), net_raw=score(raw, truth),
+               p_ls=prop.p_ls,
+               # Tier-0 solvable: the periodogram landed within 1% of the
+               # period or a harmonic — the regime any method can work in
+               ls_ok=bool(period_err_frac(prop.p_ls, truth.period_s) < 0.01))
     pol = polish(obs, shape, prop)
     out["net_polished"] = score(pol, truth)
     out["net_polished"]["t_total_s"] = pol["t_s"] + prop.t_ms / 1e3

@@ -34,20 +34,33 @@ from ..shapes import FacetModel
 
 AXES = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
 
-# Multi-scale Fourier features of time. A raw scalar t cannot express spin
-# phase at the ~1% resolution periodicity detection needs (the first run
-# sat at chance for 500 steps); sin/cos at log-spaced periods spanning the
-# spin range up to the window length give every token an explicit phase
-# coordinate at every scale of interest.
-FOURIER_PERIODS_S = np.exp(np.linspace(np.log(20.0), np.log(7200.0), 16))
+# Phase-folded time. Two runs with raw / multi-scale-Fourier time sat at
+# chance: a shallow transformer has to *discover* autocorrelation at an
+# unknown lag, which is exactly what the Lomb-Scargle periodogram computes
+# exactly and cheaply (it is the sufficient statistic for that question).
+# So Tier 0 runs first, as it always does, and every token carries its
+# rotational phase at the periodogram period (fundamental + 2nd harmonic,
+# since the LS peak is often P/2 for two-fold-symmetric bodies) plus the
+# log period as a global scalar. The net then learns the genuinely hard
+# part — the SO(3) pole/axis search — as a geometry problem: brightness
+# vs (sun, observer, phase). Its period head predicts the log *ratio*
+# P_true / P_ls, i.e. which harmonic the periodogram landed on.
 N_BASE = 9
-N_FEATURES = N_BASE + 2 * len(FOURIER_PERIODS_S)
+N_FEATURES = N_BASE + 5  # + sin/cos(phase), sin/cos(2*phase), log P_ls
 
 
-def time_features(t_rel: np.ndarray) -> np.ndarray:
-    """(K, 2*n_periods) sin/cos of window-relative time at each scale."""
-    ang = 2 * np.pi * t_rel[:, None] / FOURIER_PERIODS_S[None, :]
-    return np.concatenate([np.sin(ang), np.cos(ang)], axis=1)
+def ls_period(t: np.ndarray, mag: np.ndarray, cens: np.ndarray,
+              period_range=(20.0, 900.0)) -> float:
+    """Lomb-Scargle peak period of the window's calibrated rows."""
+    from ..inversion.periodogram import _ls_peak
+    return _ls_peak(t[~cens], mag[~cens], period_range)
+
+
+def phase_features(t_rel: np.ndarray, p_ls: float) -> np.ndarray:
+    ph = 2 * np.pi * t_rel / p_ls
+    return np.column_stack([np.sin(ph), np.cos(ph), np.sin(2 * ph),
+                            np.cos(2 * ph),
+                            np.full(len(t_rel), np.log(p_ls) / 6.0)])
 
 
 @dataclass
@@ -89,13 +102,14 @@ class GeometryPool:
 
 @dataclass
 class SpinSample:
-    tokens: np.ndarray       # (N, 9)
+    tokens: np.ndarray       # (N, N_FEATURES)
     mask: np.ndarray         # (N,) True = real token
     pole: np.ndarray         # (3,)
-    log_period: float
+    log_period: float        # label: log(P_true / P_ls) — harmonic correction
     axis_idx: int
     period_s: float
     phase_rad: float
+    p_ls: float = 0.0
 
 
 def random_spin(rng: np.random.Generator,
@@ -132,24 +146,31 @@ def render_window(pool: GeometryPool, sel: np.ndarray, shape: FacetModel,
 def tokens_from_rows(t: np.ndarray, sun: np.ndarray, u_obs: np.ndarray,
                      mag: np.ndarray, range_km: np.ndarray, cens: np.ndarray,
                      t0: float, width_s: float, n_tokens: int,
-                     rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
-    """Build a padded (n_tokens, 9) token array + mask from detection rows."""
+                     rng: np.random.Generator,
+                     p_ls: float | None = None) -> tuple[np.ndarray, np.ndarray, float]:
+    """Padded (n_tokens, N_FEATURES) tokens + mask + the LS period used.
+
+    The periodogram runs on ALL calibrated rows of the window (as an
+    operational Tier 0 would), before token subsampling."""
+    cens = cens.astype(bool)
+    b_all = np.clip(mag_to_normalized_brightness(mag, range_km), 1e-9, None)
+    m_all = -2.5 * np.log10(b_all)
+    if p_ls is None:
+        p_ls = ls_period(t, m_all, cens)
     if len(t) > n_tokens:
         pick = np.sort(rng.choice(len(t), n_tokens, replace=False))
-        t, sun, u_obs, mag, range_km, cens = (a[pick] for a in
-                                              (t, sun, u_obs, mag, range_km, cens))
-    b = np.clip(mag_to_normalized_brightness(mag, range_km), 1e-9, None)
-    m_n = -2.5 * np.log10(b)
-    ok = ~cens.astype(bool)
+        t, sun, u_obs, m_all, cens = (a[pick] for a in (t, sun, u_obs, m_all, cens))
+    m_n = m_all
+    ok = ~cens
     med = np.median(m_n[ok]) if ok.any() else np.median(m_n)
     feats = np.column_stack([
         (t - t0) / width_s, sun, u_obs, (m_n - med) / 2.0, cens.astype(float),
-        time_features(t - t0)])
+        phase_features(t - t0, p_ls)])
     out = np.zeros((n_tokens, N_FEATURES), dtype=np.float32)
     mask = np.zeros(n_tokens, dtype=bool)
     out[:len(feats)] = feats
     mask[:len(feats)] = True
-    return out, mask
+    return out, mask, float(p_ls)
 
 
 def sample_example(pool: GeometryPool, shapes: list[FacetModel],
@@ -164,23 +185,26 @@ def sample_example(pool: GeometryPool, shapes: list[FacetModel],
             continue
         rows = sel[keep]
         t0 = float(pool.t_s[sel].min())
-        tok, mask = tokens_from_rows(pool.t_s[rows], pool.sun_eci[rows],
-                                     -pool.los_eci[rows], mag,
-                                     pool.range_km[rows], cens, t0, width_s,
-                                     n_tokens, rng)
+        tok, mask, p_ls = tokens_from_rows(pool.t_s[rows], pool.sun_eci[rows],
+                                           -pool.los_eci[rows], mag,
+                                           pool.range_km[rows], cens, t0,
+                                           width_s, n_tokens, rng)
         return SpinSample(tok, mask, att.pole.astype(np.float32),
-                          float(np.log(att.period_s)), AXES.index(att.body_axis),
-                          att.period_s, att.phase_rad)
+                          float(np.log(att.period_s / p_ls)),
+                          AXES.index(att.body_axis), att.period_s,
+                          att.phase_rad, p_ls)
     raise RuntimeError("could not draw a detectable example")
 
 
 def tokens_from_obs(obs: ObservationSet, t0: float, width_s: float,
-                    n_tokens: int, rng: np.random.Generator):
+                    n_tokens: int, rng: np.random.Generator,
+                    p_ls: float | None = None):
     """Tokens for a real/simulated ObservationSet window (eval path)."""
     sel = np.nonzero((obs.t_s >= t0) & (obs.t_s < t0 + width_s))[0]
     o = obs.subset(sel)
     return tokens_from_rows(o.t_s, o.sun_eci, o.u_obs_from_target(), o.mag,
-                            o.range_km, o.censored, t0, width_s, n_tokens, rng)
+                            o.range_km, o.censored, t0, width_s, n_tokens, rng,
+                            p_ls)
 
 
 def sample_batch(pool, shapes, rng, batch: int, **kw):
@@ -189,3 +213,16 @@ def sample_batch(pool, shapes, rng, batch: int, **kw):
             np.stack([e.pole for e in ex]),
             np.array([e.log_period for e in ex], dtype=np.float32),
             np.array([e.axis_idx for e in ex]))
+
+
+def ls_accuracy(pool, shapes, rng, n: int = 100, **kw) -> dict:
+    """How often Tier 0 alone lands on the period (harmonic-tolerant)
+    for generated windows — the ceiling the net's period head starts from."""
+    hits, ratios = 0, []
+    for _ in range(n):
+        e = sample_example(pool, shapes, rng, **kw)
+        r = e.period_s / e.p_ls
+        ratios.append(r)
+        hits += int(min(abs(r * h - 1.0) for h in (1.0, 0.5, 2.0)) < 0.01)
+    return dict(frac_within_1pct=hits / n,
+                log_ratio_median=float(np.median(np.abs(np.log(ratios)))))

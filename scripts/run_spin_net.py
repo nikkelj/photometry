@@ -54,12 +54,17 @@ def fleet_truth() -> PrincipalAxisSpin:
 
 
 def main() -> None:
+    global WIDTH_S
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", type=int, default=2500)
     ap.add_argument("--skip-train", action="store_true")
     ap.add_argument("--n-synth", type=int, default=40)
     ap.add_argument("--tf", action="store_true")
+    ap.add_argument("--width", type=float, default=WIDTH_S,
+                    help="window length (s); the Tier-0 period ceiling rises "
+                         "with arc length")
     args = ap.parse_args()
+    WIDTH_S = args.width
     OUT.mkdir(parents=True, exist_ok=True)
 
     lib, _ = unified_library()
