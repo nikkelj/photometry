@@ -447,28 +447,40 @@ so the physics keeps the certificate:
 | 0 | raw window-relative time as a token feature | chance-level on every head after 500 steps: a scalar t cannot express spin phase at the resolution periodicity needs |
 | 0b | multi-scale Fourier time features (16 periods) | still chance: a shallow transformer must *discover* autocorrelation at an unknown lag — precisely what Lomb–Scargle computes exactly and cheaply |
 | 1 | **phase-fold every token at the Tier-0 periodogram period**; period head predicts the harmonic ratio P/P_LS; pole/axis losses masked to Tier-0-solvable windows (only ~45–55 % of random 2 h spin states are periodogram-solvable — many are photometrically quiet) | harmonic-ratio and body-axis heads learn; **the pole head collapses to a mean direction** (all fleet tumblers at the same ~48° raw error) — a unit-vector regression with a masked axial loss on ~7 examples per batch is a hopeless signal |
-| 2 | pole head as **classification over the same ~200-bin axial Fibonacci grid the search sweeps** (multi-hypothesis for free: top-k bins seed the polish); parallel data workers | *pending — see `results/learn/summary.json`* |
+| 2 | pole head as **classification over the same ~200-bin axial Fibonacci grid the search sweeps** (multi-hypothesis for free: top-4 bins seed the polish); parallel data workers; 3,000 steps | pole cross-entropy never leaves chance (5.2 vs ln 200 = 5.3) on the stream, yet the same net **memorizes 24 fixed examples to 100 % in 100 steps** — the pipeline is sound and the head is data-starved (~11 pole-labeled examples per step). The top-4 seeding still lifts polish success to 10 % and **rescues two windows where the grid itself failed** (88.8° → 8.9°, 84.8° → 4.1°) |
 
-**Iteration 1 measured against the grid** (40 held-out windows on shapes
-never trained on; identical cost function from two starting points):
+**Measured against the grid** (40 held-out windows on shapes never
+trained on; identical cost function from two starting points; chart 19):
 
-| | net raw | net + polish | grid search |
-|---|---|---|---|
-| pole error, median | 62.8° | 61.8° | **0.1°** |
-| pole error < 2° | 0 % | 2 % | **72 %** (88 % on Tier-0-solvable windows) |
-| body axis correct | 52 % | — | 80 % |
-| wall time, median | 0.05 s | 1.8 s | 9.4 s |
+| | iter-1 net + polish | iter-2 net raw | **iter-2 net + polish** | grid search |
+|---|---|---|---|---|
+| pole error, median | 61.8° | 48.0° | 39.2° | **0.1°** |
+| pole error < 2° | 2 % | 0 % | 10 % (12 % on Tier-0-solvable) | **72 %** (88 % on Tier-0-solvable) |
+| pole error < 5° | — | 0 % | 20 % | 80 % |
+| body axis correct | 52 % | 60 % | — | 80 % |
+| wall time, median | 1.8 s | 0.05 s | 1.7 s | 8.8 s |
+| fleet tumblers < 2° | 0 / 6 | — | 0 / 6 | 5 / 6 |
 
-A clean negative result, and the honest reading is structural, not
-merely "needs more training": the pole is the SO(3) part — exactly the
-part amortization exists for — and it is where the learning signal is
-weakest, because only Tier-0-solvable windows carry any pole
-information and the loss must be masked to them. The two heads that
-*did* learn (harmonic ratio, body axis) are the two that a physicist
-would also call easy. What survives regardless of iteration 2's
-outcome: the geometry-pool data generator (a label factory for any
-future learned component) and the verifier discipline — a net proposal
-is never trusted without a physics cost number beside it.
+![learned proposer](results/charts/19_spin_net.png)
+
+**Verdict: the go/no-go fails, and the reason is now precise.** The
+pipeline is verified correct (the memorization test), the easy heads
+learn, and the hard head — the SO(3) pole, the one thing amortization
+exists for — is starved: the only windows that carry pole information
+are the Tier-0-solvable half, so a CPU-budget stream of ~11 labeled
+examples per step is nowhere near what a 200-way geometric
+classification needs to generalize (the literature's amortized-inference
+nets train on millions of examples; this run saw ~33k). Two observations
+survive the negative: (1) the **multi-hypothesis seed is a genuine
+complement** — the union of grid-or-net success is 75 % vs 72 % for the
+grid alone, because the net's top-4 bins occasionally sit in a basin the
+grid's simplex refinement stalled outside of; (2) the label factory
+(exact-label windows in milliseconds from the geometry pool) and the
+verifier discipline (no proposal trusted without a physics cost beside
+it) are the reusable assets. What it would take to turn this positive:
+GPU-scale training on ~10⁶ Tier-0-solvable windows, and a loss over the
+symmetry-quotient so the antipode/axis-swap twins stop fighting the
+gradient — a real project, not an afternoon.
 
 ---
 

@@ -61,26 +61,27 @@ fix left a module — and it is time to say which parts are load-bearing.
    unify on `huber_mag_cost` with a fast-path attitude and delete the
    other (~60 lines, and one fewer place for a censoring bug to hide).
 
-## What the learned proposer lets us cut *if it works*
+## What the learned proposer would have let us cut — and didn't
 
-The set-transformer proposal + physics polish replaces the brute-force
-search, not the physics. If the go/no-go metric holds (net-seeded polish
-converges at least as often as the exhaustive grid, in seconds instead
-of a minute), then:
+The set-transformer proposal + physics polish was meant to replace the
+brute-force search, not the physics. Its go/no-go (net-seeded polish
+converging at least as often as the exhaustive grid, in seconds) **failed**
+at CPU training budget: 10 % vs 72 % within 2° on held-out windows, with
+the pipeline verified sound by a memorization test and the pole head
+plainly data-starved (see the README's learned-proposer section). So
+none of the contingent cuts are unlocked:
 
-- `grid_search_pole`'s exhaustive Fibonacci × phase × axis sweep becomes
-  an optional fallback (`--exhaustive`), not the default path.
-- `ladder_spin_search` (the coherent period ladder for censored
-  tumblers, which locked a wrong harmonic on ISS anyway) is deletable —
-  the net's period head plus a harmonic-tolerant polish covers it.
-- The torque-free multi-start (`fit_torque_free`'s start bank: seed
-  periods × 3 axes × 2 attitudes × 2 inertias, two phases) collapses to
-  a single seeded fit if the seed lands in-basin.
-- The shortlist funnel's channel B (tumble fingerprints) could be
-  replaced by the net's mode/spin posterior as a ranking feature.
+- `grid_search_pole`'s exhaustive sweep stays the default path.
+- `ladder_spin_search` stays (still the only tool for censored tumblers).
+- `fit_torque_free`'s multi-start bank stays.
 
-That is ~400 lines of search machinery and the two documented open
-problems, contingent on the measured result in `results/learn/`.
+What the experiment *does* justify keeping: `learn/data.py` (the
+geometry-pool label factory, reusable for any future learned component)
+and `learn/evaluate.py` (the verifier harness). One measured upside — the
+net's top-k seeds rescued two windows the grid failed on (union success
+75 % vs 72 %) — is worth folding into the classical path directly:
+seed the simplex from several grid minima, not one. That is a 10-line
+change to `grid_search_pole`, not a neural network.
 
 ## What must not be cut
 

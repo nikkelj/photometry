@@ -293,9 +293,9 @@ s.addText([
   { text: "Iteration log: ", options: { bold: true, color: ORANGE } },
   { text: "raw time → chance; Fourier time → chance (a shallow net must rediscover autocorrelation — the periodogram's job); phase-fold at the Tier-0 period → harmonic & body-axis heads learn, pole head collapses; pole classification over the search grid → memorizes 24 examples perfectly, still chance on the stream.\n\n", options: {} },
   { text: "Measured: ", options: { bold: true, color: MAGENTA } },
-  { text: "net-seeded polish < 2° on 2% of held-out windows vs 72% for the grid (1.8 s vs 9 s). The SO(3) pole is exactly the part amortization exists for, and exactly where the label signal is thinnest (only Tier-0-solvable windows carry it).\n\n", options: {} },
+  { text: "net-seeded polish < 2° on 10% of held-out windows vs 72% for the grid (1.7 s vs 9 s); top-4 seeds rescued two windows the grid failed (union 75%). The SO(3) pole is exactly the part amortization exists for, and exactly where the label signal is thinnest (only Tier-0-solvable windows carry it).\n\n", options: {} },
   { text: "Verdict: ", options: { bold: true, color: AQUA } },
-  { text: "pipeline verified sound; data/compute-starved on CPU (~10 labeled examples per step vs a 200-way geometric classification). Kept: the label factory and the verifier discipline.", options: {} },
+  { text: "go/no-go fails at CPU budget; pipeline verified sound; ~33k examples seen vs the ~10⁶ amortized inference needs. Kept: the label factory, the verifier discipline, and a 10-line classical lesson — seed the simplex from several grid minima.", options: {} },
 ], { x: 8.75, y: 1.65, w: 4.1, h: 5.65, fontSize: 10.5, color: INK2, margin: 0, valign: "top" });
 
 // ------------------------------------------------- 12. movies
